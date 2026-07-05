@@ -1,5 +1,6 @@
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Constants from "expo-constants";
+import { EmergencyPanel } from "@/components/EmergencyPanel";
 
 const SUPPORT_EMAIL = "serega312312l@gmail.com";
 const PRIVACY_URL = "https://sites.google.com/view/avtogid-privacy";
@@ -14,6 +15,8 @@ export default function AboutScreen() {
         AVTOGID допомагає швидко знайти СТО, евакуатор, шиномонтаж або автомагазин поруч — коли
         сталася поломка, прокол колеса чи ДТП.
       </Text>
+
+      <EmergencyPanel />
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Можливості</Text>

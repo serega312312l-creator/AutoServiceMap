@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { CATEGORY_FILTERS } from "@/constants/categories";
 import { formatDistance } from "@/services/locationService";
 import { Place } from "@/types/place";
@@ -83,8 +83,20 @@ export default function PlaceDetailsScreen() {
         </View>
       ) : null}
 
-      <Pressable style={styles.primaryButton} onPress={() => openNavigation(selectedPlace)}>
-        <Text style={styles.primaryButtonText}>Прокласти маршрут</Text>
+      <Pressable
+        style={styles.primaryButton}
+        onPress={() =>
+          router.navigate({
+            pathname: "/",
+            params: { buildRoute: JSON.stringify(selectedPlace) },
+          })
+        }
+      >
+        <Text style={styles.primaryButtonText}>Маршрут на карті</Text>
+      </Pressable>
+
+      <Pressable style={styles.secondaryButton} onPress={() => openNavigation(selectedPlace)}>
+        <Text style={styles.secondaryButtonText}>Відкрити в Google Maps</Text>
       </Pressable>
     </ScrollView>
   );
@@ -195,6 +207,19 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "800",
+  },
+  secondaryButton: {
+    marginTop: 10,
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  secondaryButtonText: {
+    color: "#94a3b8",
+    fontSize: 14,
+    fontWeight: "600",
   },
   errorTitle: {
     color: "#f8fafc",

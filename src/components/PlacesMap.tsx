@@ -1,13 +1,14 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE, Region } from "react-native-maps";
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE, Region } from "react-native-maps";
 import { CATEGORY_FILTERS } from "@/constants/categories";
-import { Place, UserLocation } from "@/types/place";
+import { Coordinates, Place, UserLocation } from "@/types/place";
 
 interface PlacesMapProps {
   location: UserLocation;
   places: Place[];
-  nearestPlaceId?: string;
+  routeCoordinates?: Coordinates[];
+  routeDestination?: Place | null;
   onPlacePress: (place: Place) => void;
 }
 
@@ -40,7 +41,8 @@ function getCategoryEmoji(category: Place["category"]): string {
 export function PlacesMap({
   location,
   places,
-  nearestPlaceId,
+  routeCoordinates,
+  routeDestination,
   onPlacePress,
 }: PlacesMapProps) {
   const mapRef = useRef<MapView>(null);
@@ -55,6 +57,18 @@ export function PlacesMap({
     [location.latitude, location.longitude]
   );
 
+  useEffect(() => {
+    if (routeCoordinates && routeCoordinates.length > 1) {
+      mapRef.current?.fitToCoordinates(
+        [
+          { latitude: location.latitude, longitude: location.longitude },
+          ...routeCoordinates,
+        ],
+        { edgePadding: { top: 100, right: 40, bottom: 100, left: 40 }, animated: true }
+      );
+    }
+  }, [routeCoordinates, location.latitude, location.longitude]);
+
   return (
     <View style={styles.container}>
       <MapView
@@ -64,20 +78,18 @@ export function PlacesMap({
         initialRegion={region}
         showsUserLocation
         showsMyLocationButton
-        onMapReady={() => {
-          if (places.length > 0) {
-            mapRef.current?.fitToCoordinates(
-              [
-                { latitude: location.latitude, longitude: location.longitude },
-                ...places.slice(0, 5).map((p) => p.coordinates),
-              ],
-              { edgePadding: { top: 80, right: 40, bottom: 120, left: 40 }, animated: true }
-            );
-          }
-        }}
       >
+        {routeCoordinates && routeCoordinates.length > 1 ? (
+          <Polyline
+            coordinates={routeCoordinates}
+            strokeColor="#2563eb"
+            strokeWidth={5}
+            lineDashPattern={undefined}
+          />
+        ) : null}
+
         {places.map((place) => {
-          const isNearest = place.id === nearestPlaceId;
+          const isDestination = place.id === routeDestination?.id;
           const color = getMarkerColor(place.category);
           return (
             <Marker
@@ -85,14 +97,13 @@ export function PlacesMap({
               coordinate={place.coordinates}
               title={place.name}
               description={place.address}
-              onCalloutPress={() => onPlacePress(place)}
               onPress={() => onPlacePress(place)}
             >
               <View
                 style={[
                   styles.marker,
-                  { backgroundColor: color, borderColor: isNearest ? "#fbbf24" : "#fff" },
-                  isNearest && styles.markerNearest,
+                  { backgroundColor: color, borderColor: isDestination ? "#fbbf24" : "#fff" },
+                  isDestination && styles.markerHighlight,
                 ]}
               >
                 <Text style={styles.markerEmoji}>{getCategoryEmoji(place.category)}</Text>
@@ -113,25 +124,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   marker: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
     elevation: 4,
   },
-  markerNearest: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+  markerHighlight: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 3,
   },
   markerEmoji: {
-    fontSize: 16,
+    fontSize: 15,
   },
 });

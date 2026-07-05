@@ -48,6 +48,8 @@ import {
   findNearestByCategory,
 } from "@/services/placesAggregator";
 import { checkFavoriteGeofence, checkNewPlacesAfterUpdate } from "@/services/notificationService";
+import { registerPushTokens } from "@/services/pushTokenService";
+import { updateWidgetSnapshot } from "@/services/widgetDataService";
 import {
   fetchDrivingRoutes,
   getRemainingRouteDistance,
@@ -142,6 +144,11 @@ export default function HomeScreen() {
     checkNewPlacesAfterUpdate(location, localCount).catch(() => {});
   }, [location, localCount]);
 
+  useEffect(() => {
+    if (!location) return;
+    registerPushTokens(location).catch(() => {});
+  }, [location?.latitude, location?.longitude]);
+
   const toggleAlongRoute = useCallback(() => {
     setAlongRoute((prev) => {
       const next = !prev;
@@ -157,6 +164,15 @@ export default function HomeScreen() {
     }
     return filteredPlaces[0] ?? null;
   }, [filteredPlaces]);
+
+  useEffect(() => {
+    if (!location || filteredPlaces.length === 0) return;
+    updateWidgetSnapshot({
+      nearest: nearestService,
+      nearestSto: findNearestByCategory(filteredPlaces, "sto"),
+      nearestTow: findNearestByCategory(filteredPlaces, "towing"),
+    }).catch(() => {});
+  }, [location, filteredPlaces, nearestService]);
 
   const buildRoute = useCallback(
     async (place: Place) => {

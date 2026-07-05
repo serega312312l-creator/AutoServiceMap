@@ -88,7 +88,10 @@ export async function checkNewPlacesAfterUpdate(
   await setJson(LAST_DB_COUNT_KEY, map);
 
   if (prev > 0 && currentCount > prev) {
-    await notifyDatabaseUpdate(currentCount - prev, regionLabel);
+    const delta = currentCount - prev;
+    await notifyDatabaseUpdate(delta, regionLabel);
+    const { notifyServerNewPlacesNearby } = await import("@/services/pushTokenService");
+    await notifyServerNewPlacesNearby(delta, regionLabel);
   }
 }
 

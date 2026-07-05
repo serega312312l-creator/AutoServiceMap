@@ -1,7 +1,7 @@
 {
   "name": "avtogid",
   "version": "1.0.0",
-  "main": "expo-router/entry",
+  "main": "index.js",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
@@ -10,6 +10,7 @@
     "lint": "expo lint",
     "build:db": "node scripts/build-database.mjs",
     "export:manifest": "node scripts/export-manifest.mjs",
+    "notify:region": "node scripts/notify-region-push.mjs",
     "build:android:preview": "eas build --platform android --profile preview",
     "build:android:store": "eas build --platform android --profile production",
     "submit:android": "eas submit --platform android --profile production"
@@ -33,6 +34,7 @@
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-android-widget": "^0.20.3",
     "react-native-maps": "1.20.1",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0"

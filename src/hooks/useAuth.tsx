@@ -41,6 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const u = await signIn(email, password);
     setUser(u);
     await syncWithCloud();
+    const { registerPushTokens } = await import("@/services/pushTokenService");
+    await registerPushTokens();
   }, []);
 
   const handleSignUp = useCallback(async (email: string, password: string, name?: string) => {

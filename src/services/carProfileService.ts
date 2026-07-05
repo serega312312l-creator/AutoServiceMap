@@ -1,11 +1,21 @@
 import { CarProfile } from "@/types/car";
 import { generateId, getJson, setJson } from "@/services/storageUtils";
+import { scheduleCloudSync } from "@/services/cloudSyncScheduler";
 
 const CARS_KEY = "avtogid:cars";
 const ACTIVE_CAR_KEY = "avtogid:active_car";
 
 export async function getCars(): Promise<CarProfile[]> {
   return getJson<CarProfile[]>(CARS_KEY, []);
+}
+
+export async function setCars(cars: CarProfile[]): Promise<void> {
+  await setJson(CARS_KEY, cars);
+}
+
+export async function setActiveCarId(id: string): Promise<void> {
+  const { default: AsyncStorage } = await import("@react-native-async-storage/async-storage");
+  await AsyncStorage.setItem(ACTIVE_CAR_KEY, id);
 }
 
 export async function getActiveCarId(): Promise<string | null> {
@@ -39,6 +49,7 @@ export async function saveCar(car: Omit<CarProfile, "id" | "createdAt"> & { id?:
 
   await setJson(CARS_KEY, cars);
   if (cars.length === 1) await setActiveCar(profile.id);
+  scheduleCloudSync();
   return profile;
 }
 
@@ -50,11 +61,13 @@ export async function deleteCar(id: string): Promise<void> {
     const { default: AsyncStorage } = await import("@react-native-async-storage/async-storage");
     await AsyncStorage.setItem(ACTIVE_CAR_KEY, cars[0]?.id ?? "");
   }
+  scheduleCloudSync();
 }
 
 export async function setActiveCar(id: string): Promise<void> {
   const { default: AsyncStorage } = await import("@react-native-async-storage/async-storage");
   await AsyncStorage.setItem(ACTIVE_CAR_KEY, id);
+  scheduleCloudSync();
 }
 
 export async function updateCarMileage(id: string, mileageKm: number): Promise<void> {
@@ -63,5 +76,6 @@ export async function updateCarMileage(id: string, mileageKm: number): Promise<v
   if (car) {
     car.mileageKm = mileageKm;
     await setJson(CARS_KEY, cars);
+    scheduleCloudSync();
   }
 }

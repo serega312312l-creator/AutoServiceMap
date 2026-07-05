@@ -4,6 +4,9 @@ const DATABASE_MANIFEST_URL = process.env.DATABASE_MANIFEST_URL ?? "";
 const DATABASE_BASE_URL = process.env.DATABASE_BASE_URL ?? "";
 const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? "";
+const fs = require("fs");
+const path = require("path");
+const hasGoogleServices = fs.existsSync(path.join(__dirname, "google-services.json"));
 
 /** @type {import('expo/config').ExpoConfig} */
 module.exports = {
@@ -37,6 +40,7 @@ module.exports = {
       backgroundColor: "#0f172a",
     },
     package: "com.avtogid.app",
+    ...(hasGoogleServices ? { googleServicesFile: "./google-services.json" } : {}),
     permissions: [
       "ACCESS_COARSE_LOCATION",
       "ACCESS_FINE_LOCATION",
@@ -79,6 +83,23 @@ module.exports = {
       {
         icon: "./assets/icon.png",
         color: "#2563eb",
+      },
+    ],
+    [
+      "react-native-android-widget",
+      {
+        widgets: [
+          {
+            name: "AvtogidQuick",
+            label: "AVTOGID",
+            description: "Найближче СТО, 112 та швидкий доступ",
+            minWidth: "250dp",
+            minHeight: "110dp",
+            targetCellWidth: 4,
+            targetCellHeight: 2,
+            updatePeriodMillis: 900000,
+          },
+        ],
       },
     ],
   ],

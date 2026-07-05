@@ -2,12 +2,17 @@ import { HistoryEntry, HistoryEventType } from "@/types/history";
 import { Place } from "@/types/place";
 import { ScenarioId } from "@/types/scenario";
 import { generateId, getJson, setJson } from "@/services/storageUtils";
+import { scheduleCloudSync } from "@/services/cloudSyncScheduler";
 
 const HISTORY_KEY = "avtogid:history";
 const MAX_HISTORY = 200;
 
 export async function getHistory(): Promise<HistoryEntry[]> {
   return getJson<HistoryEntry[]>(HISTORY_KEY, []);
+}
+
+export async function setHistory(entries: HistoryEntry[]): Promise<void> {
+  await setJson(HISTORY_KEY, entries.slice(0, MAX_HISTORY));
 }
 
 export async function addHistoryEntry(
@@ -24,6 +29,7 @@ export async function addHistoryEntry(
   const history = await getHistory();
   history.unshift(entry);
   await setJson(HISTORY_KEY, history.slice(0, MAX_HISTORY));
+  scheduleCloudSync();
   return entry;
 }
 
@@ -66,6 +72,7 @@ export async function recordShareLocation(lat: number, lng: number): Promise<voi
 
 export async function clearHistory(): Promise<void> {
   await setJson(HISTORY_KEY, []);
+  scheduleCloudSync();
 }
 
 export function formatHistoryForExport(entries: HistoryEntry[]): string {

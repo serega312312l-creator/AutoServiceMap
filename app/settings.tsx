@@ -105,6 +105,13 @@ export default function SettingsScreen() {
       ) : null}
 
       <View style={styles.dbBox}>
+        <Text style={styles.dbTitle}>📱 Віджет Android</Text>
+        <Text style={styles.dbMeta}>
+          Довгий тап на головному екрані → Віджети → AVTOGID. Показує найближче СТО та кнопки 112/СТО.
+        </Text>
+      </View>
+
+      <View style={styles.dbBox}>
         <Text style={styles.dbTitle}>🔔 Сповіщення</Text>
         <Pressable
           style={styles.themeRow}

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -9,14 +9,21 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { EmergencyPanel } from "@/components/EmergencyPanel";
+import { InsuranceChecklist } from "@/components/InsuranceChecklist";
 import { OfflineBanner } from "@/components/OfflineBanner";
+import { ScenarioPicker } from "@/components/ScenarioPicker";
+import { ShareLocationButton } from "@/components/ShareLocationButton";
+import { BREAKDOWN_SCENARIOS } from "@/constants/scenarios";
+import { useHistory } from "@/hooks/useHistory";
 import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
+import { usePremium } from "@/hooks/usePremium";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { MAX_COVERAGE_RADIUS_METERS } from "@/constants/categories";
 import { findNearestByCategory } from "@/services/placesAggregator";
 import { formatDistance } from "@/services/locationService";
 import { Place } from "@/types/place";
+import { ScenarioId } from "@/types/scenario";
 import { callPhone } from "@/utils/navigation";
 
 function ServiceCard({
@@ -73,10 +80,42 @@ export default function BreakdownScreen() {
     radiusMeters: MAX_COVERAGE_RADIUS_METERS,
   });
   const { favorites, recent } = useSavedPlaces();
+  const { logBreakdown, logShare } = useHistory();
+  const { isPremium } = usePremium();
+  const [scenario, setScenario] = useState<ScenarioId | null>(null);
+
+  const scenarioDef = BREAKDOWN_SCENARIOS.find((s) => s.id === scenario);
+
+  const scenarioPlaces = useMemo(() => {
+    if (!scenarioDef) return null;
+    const result: { title: string; emoji: string; place: Place | null }[] = [];
+    const labels: Record<string, { title: string; emoji: string }> = {
+      towing: { title: "Евакуатор", emoji: "🛻" },
+      sto: { title: "СТО", emoji: "🔧" },
+      tires: { title: "Шиномонтаж", emoji: "🛞" },
+      fuel: { title: "АЗС", emoji: "⛽" },
+      autoshop: { title: "Запчастини", emoji: "🛒" },
+      diagnostics: { title: "Діагностика", emoji: "🖥️" },
+      body_shop: { title: "Кузовний", emoji: "🎨" },
+    };
+
+    for (const cat of scenarioDef.categories) {
+      const info = labels[cat] ?? { title: cat, emoji: "📍" };
+      result.push({
+        ...info,
+        place: findNearestByCategory(places, cat),
+      });
+    }
+    return result;
+  }, [scenarioDef, places]);
 
   const nearestTow = useMemo(() => findNearestByCategory(places, "towing"), [places]);
   const nearestSto = useMemo(() => findNearestByCategory(places, "sto"), [places]);
   const nearestTires = useMemo(() => findNearestByCategory(places, "tires"), [places]);
+
+  useEffect(() => {
+    if (scenario) logBreakdown(scenario);
+  }, [scenario, logBreakdown]);
 
   const goRoute = (place: Place) => {
     router.navigate({
@@ -108,7 +147,37 @@ export default function BreakdownScreen() {
         Екстрені служби та найближчі сервіси в радіусі 100 км. Працює навіть без інтернету.
       </Text>
 
+      <ShareLocationButton
+        latitude={location.latitude}
+        longitude={location.longitude}
+        onShared={() => logShare(location.latitude, location.longitude)}
+        large
+      />
+
+      {isPremium ? (
+        <Pressable style={styles.sosLink} onPress={() => router.push("/sos")}>
+          <Text style={styles.sosLinkText}>👑 SOS сім'ї (Premium)</Text>
+        </Pressable>
+      ) : null}
+
       <EmergencyPanel />
+
+      <ScenarioPicker selected={scenario} onSelect={(id) => setScenario(id)} />
+
+      {scenarioDef ? (
+        <View style={styles.tipsBox}>
+          <Text style={styles.tipsTitle}>
+            {scenarioDef.emoji} {scenarioDef.label}
+          </Text>
+          {scenarioDef.tips.map((tip) => (
+            <Text key={tip} style={styles.tip}>
+              • {tip}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+
+      {scenario === "accident" ? <InsuranceChecklist /> : null}
 
       <OfflineBanner
         isOffline={isOffline}
@@ -119,29 +188,22 @@ export default function BreakdownScreen() {
 
       {loading ? (
         <ActivityIndicator color="#60a5fa" style={{ marginVertical: 20 }} />
+      ) : scenarioPlaces ? (
+        scenarioPlaces.map((item) => (
+          <ServiceCard
+            key={item.title}
+            title={item.title}
+            emoji={item.emoji}
+            place={item.place}
+            onRoute={goRoute}
+            onDetails={goDetails}
+          />
+        ))
       ) : (
         <>
-          <ServiceCard
-            title="Евакуатор"
-            emoji="🛻"
-            place={nearestTow}
-            onRoute={goRoute}
-            onDetails={goDetails}
-          />
-          <ServiceCard
-            title="СТО"
-            emoji="🔧"
-            place={nearestSto}
-            onRoute={goRoute}
-            onDetails={goDetails}
-          />
-          <ServiceCard
-            title="Шиномонтаж"
-            emoji="🛞"
-            place={nearestTires}
-            onRoute={goRoute}
-            onDetails={goDetails}
-          />
+          <ServiceCard title="Евакуатор" emoji="🛻" place={nearestTow} onRoute={goRoute} onDetails={goDetails} />
+          <ServiceCard title="СТО" emoji="🔧" place={nearestSto} onRoute={goRoute} onDetails={goDetails} />
+          <ServiceCard title="Шиномонтаж" emoji="🛞" place={nearestTires} onRoute={goRoute} onDetails={goDetails} />
         </>
       )}
 
@@ -187,6 +249,18 @@ const styles = StyleSheet.create({
   loadingText: { color: "#94a3b8", marginTop: 12 },
   headline: { color: "#f87171", fontSize: 22, fontWeight: "800", marginBottom: 6 },
   subhead: { color: "#94a3b8", lineHeight: 20, marginBottom: 12 },
+  sosLink: { marginVertical: 8, alignItems: "center" },
+  sosLinkText: { color: "#fbbf24", fontWeight: "700" },
+  tipsBox: {
+    backgroundColor: "#172554",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#1e40af",
+  },
+  tipsTitle: { color: "#93c5fd", fontWeight: "800", marginBottom: 6 },
+  tip: { color: "#cbd5e1", fontSize: 13, lineHeight: 20 },
   card: {
     backgroundColor: "#1e293b",
     borderRadius: 14,

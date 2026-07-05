@@ -1,6 +1,8 @@
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Constants from "expo-constants";
+import { router } from "expo-router";
 import { EmergencyPanel } from "@/components/EmergencyPanel";
+import { PREMIUM_FEATURES } from "@/constants/premium";
 
 const SUPPORT_EMAIL = "serega312312l@gmail.com";
 const PRIVACY_URL = "https://sites.google.com/view/avtogid-privacy";
@@ -24,6 +26,18 @@ export default function AboutScreen() {
     <Text style={styles.bullet}>• Екран «Поломка» — евакуатор, СТО, 112</Text>
     <Text style={styles.bullet}>• Маршрут на карті в додатку</Text>
     <Text style={styles.bullet}>• Улюблені та нещодавні місця</Text>
+    <Text style={styles.bullet}>• Сценарії поломки (прокол, ДТП, акумулятор)</Text>
+    <Text style={styles.bullet}>• Поділитися локацією</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>👑 Premium</Text>
+        {PREMIUM_FEATURES.slice(0, 5).map((f) => (
+          <Text key={f.title} style={styles.bullet}>• {f.title}</Text>
+        ))}
+        <Pressable style={styles.premiumBtn} onPress={() => router.push("/premium")}>
+          <Text style={styles.premiumBtnText}>Дізнатись більше →</Text>
+        </Pressable>
       </View>
 
       <Pressable style={styles.linkRow} onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}>
@@ -92,4 +106,14 @@ const styles = StyleSheet.create({
     marginTop: 32,
     fontSize: 12,
   },
+  premiumBtn: {
+    marginTop: 10,
+    backgroundColor: "#422006",
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#fbbf24",
+  },
+  premiumBtnText: { color: "#fbbf24", fontWeight: "700" },
 });

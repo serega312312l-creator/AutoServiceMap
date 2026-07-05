@@ -1,0 +1,60 @@
+import { BreakdownScenario } from "@/types/scenario";
+
+export const BREAKDOWN_SCENARIOS: BreakdownScenario[] = [
+  {
+    id: "flat_tire",
+    label: "Прокол колеса",
+    emoji: "🛞",
+    description: "Прокол або спущене колесо",
+    categories: ["tires", "towing", "sto"],
+    tips: ["Увімкніть аварійку", "Встановіть знак аварійної зупинки", "Не їдьте на спущеному колесі"],
+  },
+  {
+    id: "dead_battery",
+    label: "Сів акумулятор",
+    emoji: "🔋",
+    description: "Не заводиться, слабкий акумулятор",
+    categories: ["sto", "towing", "autoshop"],
+    tips: ["Спробуйте прикурити", "Перевірте клеми", "Вимкніть споживачі"],
+  },
+  {
+    id: "wont_start",
+    label: "Не заводиться",
+    emoji: "🚫",
+    description: "Двигун не запускається",
+    categories: ["sto", "diagnostics", "towing"],
+    tips: ["Перевірте паливо", "Спробуйте повторний запуск через 30 сек"],
+  },
+  {
+    id: "accident",
+    label: "ДТП",
+    emoji: "💥",
+    description: "Дорожньо-транспортна пригода",
+    categories: ["towing", "body_shop", "sto"],
+    tips: ["Викличте 102", "Зафіксуйте місце", "Не переміщуйте авто без потреби"],
+  },
+  {
+    id: "overheat",
+    label: "Перегрів",
+    emoji: "🌡️",
+    description: "Перегрів двигуна",
+    categories: ["sto", "towing", "fuel"],
+    tips: ["Зупиніться", "Не відкривайте кришку радіатора гарячим", "Дочекайтесь охолодження"],
+  },
+  {
+    id: "out_of_fuel",
+    label: "Закінчилось пальне",
+    emoji: "⛽",
+    description: "Паливо закінчилось",
+    categories: ["fuel", "towing"],
+    tips: ["Увімкніть аварійку", "Вийдіть на узбіччя"],
+  },
+  {
+    id: "locked_out",
+    label: "Замкнувся в авто",
+    emoji: "🔐",
+    description: "Ключі всередині",
+    categories: ["sto", "towing"],
+    tips: ["Не бийте скло", "Зателефонуйте майстру"],
+  },
+];

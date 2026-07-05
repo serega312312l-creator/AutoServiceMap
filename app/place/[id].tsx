@@ -2,10 +2,14 @@ import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { CATEGORY_FILTERS } from "@/constants/categories";
+import { PlaceRatingButtons } from "@/components/PlaceRatingButtons";
+import { ShareLocationButton } from "@/components/ShareLocationButton";
 import { formatDistance } from "@/services/locationService";
 import { Place } from "@/types/place";
 import { callPhone, openNavigation, openWebsite } from "@/utils/navigation";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
+import { useHistory } from "@/hooks/useHistory";
+import { usePremium } from "@/hooks/usePremium";
 
 function getCategoryLabel(category: Place["category"]): string {
   return CATEGORY_FILTERS.find((item) => item.id === category)?.label ?? category;
@@ -14,6 +18,8 @@ function getCategoryLabel(category: Place["category"]): string {
 export default function PlaceDetailsScreen() {
   const params = useLocalSearchParams<{ id: string; data?: string }>();
   const { isFavorite, toggleFavorite, recordVisit } = useSavedPlaces();
+  const { logCall } = useHistory();
+  const { isPremium } = usePremium();
   const [fav, setFav] = useState(false);
 
   let place: Place | null = null;
@@ -81,7 +87,12 @@ export default function PlaceDetailsScreen() {
       {selectedPlace.phone ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Телефон</Text>
-          <Pressable onPress={() => callPhone(selectedPlace.phone!)}>
+          <Pressable
+            onPress={() => {
+              callPhone(selectedPlace.phone!);
+              logCall(selectedPlace);
+            }}
+          >
             <Text style={styles.link}>{selectedPlace.phone}</Text>
           </Pressable>
         </View>
@@ -102,6 +113,14 @@ export default function PlaceDetailsScreen() {
           <Text style={styles.sectionText}>{selectedPlace.openingHours}</Text>
         </View>
       ) : null}
+
+      {isPremium ? <PlaceRatingButtons placeId={selectedPlace.id} /> : null}
+
+      <ShareLocationButton
+        latitude={selectedPlace.coordinates.latitude}
+        longitude={selectedPlace.coordinates.longitude}
+        onShared={() => {}}
+      />
 
       <Pressable
         style={styles.primaryButton}

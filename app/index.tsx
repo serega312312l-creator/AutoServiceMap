@@ -8,24 +8,41 @@ import {
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { DEFAULT_RADIUS_METERS } from "@/constants/categories";
-import { FilterBar } from "@/components/FilterBar";
+import { SERVICE_PRIORITY_CATEGORIES } from "@/constants/emergency";
+import { DeadZoneBanner } from "@/components/DeadZoneBanner";
 import { DistanceFilter } from "@/components/DistanceFilter";
+import { FilterBar } from "@/components/FilterBar";
 import { MapOverlayControls } from "@/components/MapOverlayControls";
+import { NearestNowButton } from "@/components/NearestNowButton";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { PlaceList } from "@/components/PlaceList";
 import { PlacesMap } from "@/components/PlacesMap";
+import { RouteAlternativesBar } from "@/components/RouteAlternativesBar";
 import { RouteBar } from "@/components/RouteBar";
 import { SavedPlacesBar } from "@/components/SavedPlacesBar";
 import { SearchBar } from "@/components/SearchBar";
+import { VoiceToggle } from "@/components/VoiceToggle";
+import { useCarProfiles } from "@/hooks/useCarProfiles";
+import { useHistory } from "@/hooks/useHistory";
 import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
+import { usePremium } from "@/hooks/usePremium";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
+import { useSos } from "@/hooks/useSos";
 import { useUserLocation } from "@/hooks/useUserLocation";
-import { fetchDrivingRoute, RouteInfo } from "@/services/routeService";
+import { filterPlacesForCar } from "@/services/carFilterService";
+import { analyzeDeadZones, DeadZoneWarning } from "@/services/deadZoneService";
 import {
   filterPlaces,
   filterPlacesByDistance,
   filterPlacesByQuery,
+  findNearestByCategory,
 } from "@/services/placesAggregator";
+import {
+  fetchDrivingRoutes,
+  getRemainingRouteDistance,
+  RouteInfo,
+} from "@/services/routeService";
+import { updateNavigationVoice } from "@/services/voiceGuidanceService";
 import { Place, PlaceCategory } from "@/types/place";
 
 type ViewMode = "map" | "list";
@@ -38,9 +55,16 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [routePlace, setRoutePlace] = useState<Place | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const [routeAlternatives, setRouteAlternatives] = useState<RouteInfo[]>([]);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
   const [routeLoading, setRouteLoading] = useState(false);
+  const [deadZone, setDeadZone] = useState<DeadZoneWarning | null>(null);
 
   const isNavigating = routePlace != null;
+  const { isPremium } = usePremium();
+  const { activeCar } = useCarProfiles();
+  const { logRoute } = useHistory();
+  const { checkTimer } = useSos();
 
   const {
     location,
@@ -63,34 +87,61 @@ export default function HomeScreen() {
 
   const { favorites, recent, recordVisit } = useSavedPlaces();
 
+  const carFilteredPlaces = useMemo(
+    () => (isPremium && activeCar ? filterPlacesForCar(places, activeCar) : places),
+    [places, activeCar, isPremium]
+  );
+
   const filteredPlaces = useMemo(() => {
-    let result = filterPlaces(places, selectedCategory);
+    let result = filterPlaces(carFilteredPlaces, selectedCategory);
     result = filterPlacesByDistance(result, radiusMeters);
     result = filterPlacesByQuery(result, searchQuery);
     return result;
-  }, [places, selectedCategory, radiusMeters, searchQuery]);
+  }, [carFilteredPlaces, selectedCategory, radiusMeters, searchQuery]);
+
+  const nearestService = useMemo(() => {
+    for (const cat of SERVICE_PRIORITY_CATEGORIES) {
+      const found = findNearestByCategory(filteredPlaces, cat);
+      if (found) return found;
+    }
+    return filteredPlaces[0] ?? null;
+  }, [filteredPlaces]);
 
   const buildRoute = useCallback(
     async (place: Place) => {
       if (!location) return;
       setRoutePlace(place);
       setRouteInfo(null);
+      setRouteAlternatives([]);
       setRouteLoading(true);
       setViewMode("map");
       await recordVisit(place);
+      await logRoute(place);
 
-      const route = await fetchDrivingRoute(location, place.coordinates);
-      setRouteInfo(route);
+      const altCount = isPremium ? 3 : 1;
+      const routes = await fetchDrivingRoutes(location, place.coordinates, altCount);
+      setRouteAlternatives(routes);
+      setSelectedRouteIndex(0);
+      setRouteInfo(routes[0] ?? null);
       setRouteLoading(false);
     },
-    [location, recordVisit]
+    [location, recordVisit, logRoute, isPremium]
   );
 
   const clearRoute = useCallback(() => {
     setRoutePlace(null);
     setRouteInfo(null);
+    setRouteAlternatives([]);
     setRouteLoading(false);
   }, []);
+
+  const selectRoute = useCallback(
+    (index: number) => {
+      setSelectedRouteIndex(index);
+      setRouteInfo(routeAlternatives[index] ?? null);
+    },
+    [routeAlternatives]
+  );
 
   useEffect(() => {
     if (!params.buildRoute || !location) return;
@@ -101,6 +152,25 @@ export default function HomeScreen() {
       // ignore
     }
   }, [params.buildRoute, location, buildRoute]);
+
+  useEffect(() => {
+    if (!location) return;
+    analyzeDeadZones(location, filteredPlaces, heading, routeInfo?.coordinates).then(setDeadZone);
+  }, [location, filteredPlaces, heading, routeInfo?.coordinates]);
+
+  useEffect(() => {
+    if (!isNavigating || !location || !routeInfo || !routePlace) return;
+    const remaining = getRemainingRouteDistance(location, routeInfo.coordinates);
+    updateNavigationVoice(location, routeInfo.coordinates, routePlace.name, remaining);
+  }, [location, routeInfo, routePlace, isNavigating]);
+
+  useEffect(() => {
+    if (!location) return;
+    const interval = setInterval(() => {
+      checkTimer(location.latitude, location.longitude);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [location, checkTimer]);
 
   const handlePlacePress = async (place: Place) => {
     await recordVisit(place);
@@ -155,15 +225,15 @@ export default function HomeScreen() {
           </View>
           <Text style={styles.listCount}>{filteredPlaces.length} місць</Text>
         </View>
-        <OfflineBanner
-          isOffline={isOffline}
-          localCount={localCount}
-          onlineCount={onlineCount}
-          variant="inline"
-        />
+        <OfflineBanner isOffline={isOffline} localCount={localCount} onlineCount={onlineCount} variant="inline" />
         <DistanceFilter selectedMeters={radiusMeters} onSelect={setRadiusMeters} />
         <FilterBar selected={selectedCategory} onSelect={setSelectedCategory} />
         <SearchBar value={searchQuery} onChange={setSearchQuery} />
+        {nearestService ? (
+          <Pressable style={styles.nearestListBtn} onPress={() => buildRoute(nearestService)}>
+            <Text style={styles.nearestListText}>⚡ Найближчий: {nearestService.name}</Text>
+          </Pressable>
+        ) : null}
         <PlaceList
           places={filteredPlaces}
           loading={placesLoading}
@@ -186,6 +256,8 @@ export default function HomeScreen() {
         onPlacePress={handlePlacePress}
       />
 
+      <DeadZoneBanner warning={deadZone} onPremiumPress={() => router.push("/offline-maps")} />
+
       <MapOverlayControls
         viewMode={viewMode}
         onViewModeChange={setViewMode}
@@ -197,23 +269,32 @@ export default function HomeScreen() {
         onRefresh={handleRefresh}
       />
 
-      <OfflineBanner
-        isOffline={isOffline}
-        localCount={localCount}
-        onlineCount={onlineCount}
-      />
+      <OfflineBanner isOffline={isOffline} localCount={localCount} onlineCount={onlineCount} />
 
-      {!routePlace ? (
-        <SavedPlacesBar
-          favorites={favorites}
-          recent={recent}
-          onPlacePress={(p) => buildRoute(p)}
-        />
+      {!routePlace && nearestService ? (
+        <NearestNowButton place={nearestService} onPress={buildRoute} />
       ) : null}
 
-      <Pressable style={styles.breakdownFab} onPress={() => router.push("/breakdown")}>
+      {!routePlace ? (
+        <SavedPlacesBar favorites={favorites} recent={recent} onPlacePress={(p) => buildRoute(p)} />
+      ) : null}
+
+      {isPremium && isNavigating ? <VoiceToggle /> : null}
+
+      <Pressable
+        style={[styles.breakdownFab, routePlace ? styles.breakdownFabUp : null]}
+        onPress={() => router.push("/breakdown")}
+      >
         <Text style={styles.breakdownFabText}>🆘</Text>
       </Pressable>
+
+      {routeAlternatives.length > 1 ? (
+        <RouteAlternativesBar
+          routes={routeAlternatives}
+          selectedIndex={selectedRouteIndex}
+          onSelect={selectRoute}
+        />
+      ) : null}
 
       {routePlace ? (
         <RouteBar
@@ -260,6 +341,15 @@ const styles = StyleSheet.create({
   toggleText: { color: "#94a3b8", fontWeight: "600", fontSize: 13 },
   toggleTextActive: { color: "#ffffff" },
   listCount: { color: "#94a3b8", fontSize: 12, fontWeight: "600" },
+  nearestListBtn: {
+    marginHorizontal: 12,
+    marginBottom: 8,
+    backgroundColor: "#2563eb",
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  nearestListText: { color: "#fff", fontWeight: "800" },
   center: {
     flex: 1,
     alignItems: "center",
@@ -321,5 +411,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#fca5a5",
   },
+  breakdownFabUp: { bottom: 100 },
   breakdownFabText: { fontSize: 22 },
 });

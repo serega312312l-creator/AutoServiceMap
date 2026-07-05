@@ -7,12 +7,21 @@ import {
   View,
 } from "react-native";
 import { router } from "expo-router";
+import { DEFAULT_RADIUS_METERS } from "@/constants/categories";
+import { DistanceFilter } from "@/components/DistanceFilter";
+import { EmergencyPanel } from "@/components/EmergencyPanel";
 import { FilterBar } from "@/components/FilterBar";
+import { NearestPlaceBanner } from "@/components/NearestPlaceBanner";
 import { PlaceList } from "@/components/PlaceList";
 import { PlacesMap } from "@/components/PlacesMap";
+import { SearchBar } from "@/components/SearchBar";
 import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
 import { useUserLocation } from "@/hooks/useUserLocation";
-import { filterPlaces } from "@/services/placesAggregator";
+import {
+  filterPlaces,
+  filterPlacesByDistance,
+  filterPlacesByQuery,
+} from "@/services/placesAggregator";
 import { Place, PlaceCategory } from "@/types/place";
 
 type ViewMode = "map" | "list";
@@ -20,16 +29,33 @@ type ViewMode = "map" | "list";
 export default function HomeScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>("map");
   const [selectedCategory, setSelectedCategory] = useState<PlaceCategory>("all");
+  const [radiusMeters, setRadiusMeters] = useState(DEFAULT_RADIUS_METERS);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const { location, loading: locationLoading, error: locationError, permissionDenied, refresh: refreshLocation } =
-    useUserLocation();
-  const { places, loading: placesLoading, error: placesError, refresh: refreshPlaces } =
-    useNearbyPlaces(location);
+  const {
+    location,
+    loading: locationLoading,
+    error: locationError,
+    permissionDenied,
+    refresh: refreshLocation,
+  } = useUserLocation();
 
-  const filteredPlaces = useMemo(
-    () => filterPlaces(places, selectedCategory),
-    [places, selectedCategory]
-  );
+  const {
+    places,
+    nearestService,
+    effectiveRadiusMeters,
+    expandedSearch,
+    loading: placesLoading,
+    error: placesError,
+    refresh: refreshPlaces,
+  } = useNearbyPlaces(location, { radiusMeters, autoExpand: true });
+
+  const filteredPlaces = useMemo(() => {
+    let result = filterPlaces(places, selectedCategory);
+    result = filterPlacesByDistance(result, effectiveRadiusMeters);
+    result = filterPlacesByQuery(result, searchQuery);
+    return result;
+  }, [places, selectedCategory, effectiveRadiusMeters, searchQuery]);
 
   const handlePlacePress = (place: Place) => {
     router.push({
@@ -60,7 +86,7 @@ export default function HomeScreen() {
       <View style={styles.center}>
         <Text style={styles.errorTitle}>Потрібен доступ до геолокації</Text>
         <Text style={styles.errorText}>
-          Без геолокації застосунок не зможе показати СТО та автомагазини поруч з вами.
+          Без геолокації застосунок не зможе знайти найближче СТО чи евакуатор.
         </Text>
         <Pressable style={styles.button} onPress={refreshLocation}>
           <Text style={styles.buttonText}>Надати доступ</Text>
@@ -73,8 +99,14 @@ export default function HomeScreen() {
     return null;
   }
 
+  const showNearest =
+    nearestService &&
+    (filteredPlaces.length <= 3 || (nearestService.distanceMeters ?? 0) > 5_000);
+
   return (
     <View style={styles.container}>
+      <EmergencyPanel />
+
       <View style={styles.toolbar}>
         <View style={styles.toggle}>
           <Pressable
@@ -95,12 +127,19 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
+        <Pressable style={styles.refreshChip} onPress={handleRefresh}>
+          <Text style={styles.refreshText}>↻</Text>
+        </Pressable>
+
         <Text style={styles.count}>
           {filteredPlaces.length} {filteredPlaces.length === 1 ? "місце" : "місць"}
         </Text>
       </View>
 
+      <DistanceFilter selectedMeters={radiusMeters} onSelect={setRadiusMeters} />
       <FilterBar selected={selectedCategory} onSelect={setSelectedCategory} />
+
+      {viewMode === "list" ? <SearchBar value={searchQuery} onChange={setSearchQuery} /> : null}
 
       {placesError ? (
         <View style={styles.banner}>
@@ -108,10 +147,28 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
+      {showNearest && nearestService ? (
+        <NearestPlaceBanner
+          place={nearestService}
+          expandedSearch={expandedSearch}
+          effectiveRadiusKm={Math.round(effectiveRadiusMeters / 1000)}
+          onPress={handlePlacePress}
+        />
+      ) : null}
+
+      {filteredPlaces.length === 0 && !placesLoading ? (
+        <View style={styles.emptyBanner}>
+          <Text style={styles.emptyText}>
+            Поруч немає сервісів. Спробуйте збільшити радіус або натисніть ↻ для повторного пошуку.
+          </Text>
+        </View>
+      ) : null}
+
       {viewMode === "map" ? (
         <PlacesMap
           location={location}
           places={filteredPlaces}
+          nearestPlaceId={nearestService?.id}
           onPlacePress={handlePlacePress}
         />
       ) : (
@@ -126,7 +183,7 @@ export default function HomeScreen() {
       {placesLoading && viewMode === "map" ? (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator color="#ffffff" />
-          <Text style={styles.loadingOverlayText}>Оновлюємо місця поруч...</Text>
+          <Text style={styles.loadingOverlayText}>Шукаємо сервіси поруч...</Text>
         </View>
       ) : null}
     </View>
@@ -148,20 +205,20 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 4,
   },
   toggle: {
     flexDirection: "row",
     backgroundColor: "#1e293b",
-    borderRadius: 12,
-    padding: 4,
+    borderRadius: 10,
+    padding: 3,
   },
   toggleButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
   },
   toggleButtonActive: {
     backgroundColor: "#2563eb",
@@ -169,25 +226,59 @@ const styles = StyleSheet.create({
   toggleText: {
     color: "#94a3b8",
     fontWeight: "600",
+    fontSize: 13,
   },
   toggleTextActive: {
     color: "#ffffff",
   },
+  refreshChip: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#1e293b",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  refreshText: {
+    color: "#60a5fa",
+    fontSize: 18,
+    fontWeight: "700",
+  },
   count: {
+    flex: 1,
+    textAlign: "right",
     color: "#94a3b8",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
   },
   banner: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-    padding: 12,
-    borderRadius: 12,
+    marginHorizontal: 12,
+    marginBottom: 6,
+    padding: 10,
+    borderRadius: 10,
     backgroundColor: "#451a03",
   },
   bannerText: {
     color: "#fdba74",
     textAlign: "center",
+    fontSize: 12,
+  },
+  emptyBanner: {
+    marginHorizontal: 12,
+    marginBottom: 6,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: "#1e293b",
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  emptyText: {
+    color: "#94a3b8",
+    fontSize: 12,
+    textAlign: "center",
+    lineHeight: 18,
   },
   loadingText: {
     marginTop: 12,

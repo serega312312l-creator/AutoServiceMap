@@ -21,6 +21,10 @@ export function callPhone(phone: string): void {
   Linking.openURL(`tel:${phone}`);
 }
 
+export function callEmergency(number: string): void {
+  Linking.openURL(`tel:${number}`);
+}
+
 export function openWebsite(url: string): void {
   Linking.openURL(url.startsWith("http") ? url : `https://${url}`);
 }

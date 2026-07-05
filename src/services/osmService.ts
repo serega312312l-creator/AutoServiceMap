@@ -14,12 +14,15 @@ function buildOverpassQuery(lat: number, lon: number, radiusMeters: number): str
       way["shop"="tyres"](around:${radiusMeters},${lat},${lon});
       node["amenity"="car_repair"](around:${radiusMeters},${lat},${lon});
       way["amenity"="car_repair"](around:${radiusMeters},${lat},${lon});
+      node["shop"="car_repair"]["service"~"recovery|breakdown"](around:${radiusMeters},${lat},${lon});
+      way["shop"="car_repair"]["service"~"recovery|breakdown"](around:${radiusMeters},${lat},${lon});
     );
     out center tags;
   `;
 }
 
 function mapOsmTagsToCategory(tags: Record<string, string>): PlaceCategory {
+  if (tags.service?.match(/recovery|breakdown/i)) return "towing";
   if (tags.shop === "tyres") return "tires";
   if (tags.shop === "car_parts") return "autoshop";
   return "sto";

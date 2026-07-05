@@ -6,22 +6,37 @@ import {
   requestLocationPermission,
 } from "@/services/locationService";
 import { UserLocation } from "@/types/place";
-import { LOCATION_UPDATE_THRESHOLD_METERS } from "@/constants/categories";
+import {
+  LOCATION_UPDATE_THRESHOLD_METERS,
+  NAVIGATION_UPDATE_THRESHOLD_METERS,
+} from "@/constants/categories";
+
+interface UseUserLocationOptions {
+  /** Частіше оновлювати позицію під час маршруту (як у Google Maps) */
+  navigationMode?: boolean;
+}
 
 interface UseUserLocationResult {
   location: UserLocation | null;
+  heading: number | null;
   loading: boolean;
   error: string | null;
   permissionDenied: boolean;
   refresh: () => Promise<void>;
 }
 
-export function useUserLocation(): UseUserLocationResult {
+export function useUserLocation(options: UseUserLocationOptions = {}): UseUserLocationResult {
+  const { navigationMode = false } = options;
   const [location, setLocation] = useState<UserLocation | null>(null);
+  const [heading, setHeading] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const lastLocationRef = useRef<UserLocation | null>(null);
+
+  const threshold = navigationMode
+    ? NAVIGATION_UPDATE_THRESHOLD_METERS
+    : LOCATION_UPDATE_THRESHOLD_METERS;
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -61,9 +76,9 @@ export function useUserLocation(): UseUserLocationResult {
 
       subscription = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.Balanced,
-          distanceInterval: 100,
-          timeInterval: 10000,
+          accuracy: navigationMode ? Location.Accuracy.High : Location.Accuracy.Balanced,
+          distanceInterval: navigationMode ? 10 : 50,
+          timeInterval: navigationMode ? 3000 : 10000,
         },
         (position) => {
           const next: UserLocation = {
@@ -72,11 +87,12 @@ export function useUserLocation(): UseUserLocationResult {
             accuracy: position.coords.accuracy ?? undefined,
           };
 
+          if (position.coords.heading != null && position.coords.heading >= 0) {
+            setHeading(position.coords.heading);
+          }
+
           const last = lastLocationRef.current;
-          if (
-            last &&
-            getDistanceMeters(last, next) < LOCATION_UPDATE_THRESHOLD_METERS
-          ) {
+          if (last && getDistanceMeters(last, next) < threshold) {
             return;
           }
 
@@ -91,7 +107,7 @@ export function useUserLocation(): UseUserLocationResult {
     return () => {
       subscription?.remove();
     };
-  }, []);
+  }, [navigationMode, threshold]);
 
-  return { location, loading, error, permissionDenied, refresh };
+  return { location, heading, loading, error, permissionDenied, refresh };
 }

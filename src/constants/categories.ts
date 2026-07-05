@@ -6,7 +6,6 @@ export interface CategoryFilter {
   emoji: string;
 }
 
-/** Компактна панель — головні категорії для екстреної допомоги */
 export const PRIMARY_CATEGORY_FILTERS: CategoryFilter[] = [
   { id: "all", label: "Усі", emoji: "📍" },
   { id: "sto", label: "СТО", emoji: "🔧" },
@@ -16,7 +15,6 @@ export const PRIMARY_CATEGORY_FILTERS: CategoryFilter[] = [
   { id: "fuel", label: "АЗС", emoji: "⛽" },
 ];
 
-/** Додаткові категорії — розгортаються по кнопці «Ще» */
 export const EXTRA_CATEGORY_FILTERS: CategoryFilter[] = [
   { id: "car_dealer", label: "Автосалон", emoji: "🚗" },
   { id: "car_wash", label: "Мийка", emoji: "🫧" },
@@ -38,14 +36,17 @@ export interface DistanceOption {
   label: string;
 }
 
+export const MAX_COVERAGE_RADIUS_METERS = 100_000;
+
 export const DISTANCE_OPTIONS: DistanceOption[] = [
-  { meters: 5_000, label: "5 км" },
   { meters: 10_000, label: "10 км" },
   { meters: 25_000, label: "25 км" },
   { meters: 50_000, label: "50 км" },
+  { meters: MAX_COVERAGE_RADIUS_METERS, label: "100 км" },
 ];
 
-export const DEFAULT_RADIUS_METERS = 10_000;
-export const MAX_AUTO_EXPAND_RADIUS_METERS = 100_000;
+export const DEFAULT_RADIUS_METERS = MAX_COVERAGE_RADIUS_METERS;
+export const MAX_AUTO_EXPAND_RADIUS_METERS = MAX_COVERAGE_RADIUS_METERS;
 export const SEARCH_RADIUS_METERS = DEFAULT_RADIUS_METERS;
-export const LOCATION_UPDATE_THRESHOLD_METERS = 150;
+export const LOCATION_UPDATE_THRESHOLD_METERS = 80;
+export const NAVIGATION_UPDATE_THRESHOLD_METERS = 15;

@@ -11,11 +11,14 @@ import { DEFAULT_RADIUS_METERS } from "@/constants/categories";
 import { FilterBar } from "@/components/FilterBar";
 import { DistanceFilter } from "@/components/DistanceFilter";
 import { MapOverlayControls } from "@/components/MapOverlayControls";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { PlaceList } from "@/components/PlaceList";
 import { PlacesMap } from "@/components/PlacesMap";
 import { RouteBar } from "@/components/RouteBar";
+import { SavedPlacesBar } from "@/components/SavedPlacesBar";
 import { SearchBar } from "@/components/SearchBar";
 import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { fetchDrivingRoute, RouteInfo } from "@/services/routeService";
 import {
@@ -37,28 +40,35 @@ export default function HomeScreen() {
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
 
+  const isNavigating = routePlace != null;
+
   const {
     location,
+    heading,
     loading: locationLoading,
     error: locationError,
     permissionDenied,
     refresh: refreshLocation,
-  } = useUserLocation();
+  } = useUserLocation({ navigationMode: isNavigating });
 
   const {
     places,
-    effectiveRadiusMeters,
+    isOffline,
+    localCount,
+    onlineCount,
     loading: placesLoading,
     error: placesError,
     refresh: refreshPlaces,
-  } = useNearbyPlaces(location, { radiusMeters, autoExpand: true });
+  } = useNearbyPlaces(location, { radiusMeters });
+
+  const { favorites, recent, recordVisit } = useSavedPlaces();
 
   const filteredPlaces = useMemo(() => {
     let result = filterPlaces(places, selectedCategory);
-    result = filterPlacesByDistance(result, effectiveRadiusMeters);
+    result = filterPlacesByDistance(result, radiusMeters);
     result = filterPlacesByQuery(result, searchQuery);
     return result;
-  }, [places, selectedCategory, effectiveRadiusMeters, searchQuery]);
+  }, [places, selectedCategory, radiusMeters, searchQuery]);
 
   const buildRoute = useCallback(
     async (place: Place) => {
@@ -67,12 +77,13 @@ export default function HomeScreen() {
       setRouteInfo(null);
       setRouteLoading(true);
       setViewMode("map");
+      await recordVisit(place);
 
       const route = await fetchDrivingRoute(location, place.coordinates);
       setRouteInfo(route);
       setRouteLoading(false);
     },
-    [location]
+    [location, recordVisit]
   );
 
   const clearRoute = useCallback(() => {
@@ -87,17 +98,15 @@ export default function HomeScreen() {
       const place = JSON.parse(params.buildRoute) as Place;
       buildRoute(place);
     } catch {
-      // ignore invalid param
+      // ignore
     }
   }, [params.buildRoute, location, buildRoute]);
 
-  const handlePlacePress = (place: Place) => {
+  const handlePlacePress = async (place: Place) => {
+    await recordVisit(place);
     router.push({
       pathname: "/place/[id]",
-      params: {
-        id: place.id,
-        data: JSON.stringify(place),
-      },
+      params: { id: place.id, data: JSON.stringify(place) },
     });
   };
 
@@ -130,30 +139,28 @@ export default function HomeScreen() {
     );
   }
 
-  if (!location) {
-    return null;
-  }
+  if (!location) return null;
 
   if (viewMode === "list") {
     return (
       <View style={styles.container}>
         <View style={styles.listToolbar}>
           <View style={styles.toggle}>
-            <Pressable
-              style={[styles.toggleBtn, viewMode === "map" && styles.toggleActive]}
-              onPress={() => setViewMode("map")}
-            >
-              <Text style={[styles.toggleText, viewMode === "map" && styles.toggleTextActive]}>Карта</Text>
+            <Pressable style={styles.toggleBtn} onPress={() => setViewMode("map")}>
+              <Text style={styles.toggleText}>Карта</Text>
             </Pressable>
-            <Pressable
-              style={[styles.toggleBtn, styles.toggleActive]}
-              onPress={() => setViewMode("list")}
-            >
+            <Pressable style={[styles.toggleBtn, styles.toggleActive]}>
               <Text style={[styles.toggleText, styles.toggleTextActive]}>Список</Text>
             </Pressable>
           </View>
           <Text style={styles.listCount}>{filteredPlaces.length} місць</Text>
         </View>
+        <OfflineBanner
+          isOffline={isOffline}
+          localCount={localCount}
+          onlineCount={onlineCount}
+          variant="inline"
+        />
         <DistanceFilter selectedMeters={radiusMeters} onSelect={setRadiusMeters} />
         <FilterBar selected={selectedCategory} onSelect={setSelectedCategory} />
         <SearchBar value={searchQuery} onChange={setSearchQuery} />
@@ -171,9 +178,11 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <PlacesMap
         location={location}
+        heading={heading}
         places={filteredPlaces}
         routeCoordinates={routeInfo?.coordinates}
         routeDestination={routePlace}
+        isNavigating={isNavigating}
         onPlacePress={handlePlacePress}
       />
 
@@ -187,6 +196,24 @@ export default function HomeScreen() {
         placeCount={filteredPlaces.length}
         onRefresh={handleRefresh}
       />
+
+      <OfflineBanner
+        isOffline={isOffline}
+        localCount={localCount}
+        onlineCount={onlineCount}
+      />
+
+      {!routePlace ? (
+        <SavedPlacesBar
+          favorites={favorites}
+          recent={recent}
+          onPlacePress={(p) => buildRoute(p)}
+        />
+      ) : null}
+
+      <Pressable style={styles.breakdownFab} onPress={() => router.push("/breakdown")}>
+        <Text style={styles.breakdownFabText}>🆘</Text>
+      </Pressable>
 
       {routePlace ? (
         <RouteBar
@@ -203,15 +230,18 @@ export default function HomeScreen() {
           <ActivityIndicator color="#ffffff" size="small" />
         </View>
       ) : null}
+
+      {placesError ? (
+        <View style={styles.errorOverlay}>
+          <Text style={styles.errorOverlayText}>{placesError}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#0f172a",
-  },
+  container: { flex: 1, backgroundColor: "#0f172a" },
   listToolbar: {
     flexDirection: "row",
     alignItems: "center",
@@ -225,27 +255,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 3,
   },
-  toggleBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  toggleActive: {
-    backgroundColor: "#2563eb",
-  },
-  toggleText: {
-    color: "#94a3b8",
-    fontWeight: "600",
-    fontSize: 13,
-  },
-  toggleTextActive: {
-    color: "#ffffff",
-  },
-  listCount: {
-    color: "#94a3b8",
-    fontSize: 12,
-    fontWeight: "600",
-  },
+  toggleBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  toggleActive: { backgroundColor: "#2563eb" },
+  toggleText: { color: "#94a3b8", fontWeight: "600", fontSize: 13 },
+  toggleTextActive: { color: "#ffffff" },
+  listCount: { color: "#94a3b8", fontSize: 12, fontWeight: "600" },
   center: {
     flex: 1,
     alignItems: "center",
@@ -253,10 +267,7 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: "#0f172a",
   },
-  loadingText: {
-    marginTop: 12,
-    color: "#cbd5e1",
-  },
+  loadingText: { marginTop: 12, color: "#cbd5e1" },
   loadingOverlay: {
     position: "absolute",
     bottom: 80,
@@ -265,6 +276,16 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 20,
   },
+  errorOverlay: {
+    position: "absolute",
+    bottom: 120,
+    left: 12,
+    right: 12,
+    backgroundColor: "rgba(69, 10, 10, 0.9)",
+    padding: 10,
+    borderRadius: 10,
+  },
+  errorOverlayText: { color: "#fecaca", fontSize: 12, textAlign: "center" },
   errorTitle: {
     color: "#f8fafc",
     fontSize: 20,
@@ -284,8 +305,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
   },
-  buttonText: {
-    color: "#ffffff",
-    fontWeight: "700",
+  buttonText: { color: "#ffffff", fontWeight: "700" },
+  breakdownFab: {
+    position: "absolute",
+    bottom: 24,
+    left: 16,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#dc2626",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 6,
+    zIndex: 20,
+    borderWidth: 2,
+    borderColor: "#fca5a5",
   },
+  breakdownFabText: { fontSize: 22 },
 });

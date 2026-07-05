@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { CATEGORY_FILTERS } from "@/constants/categories";
 import { formatDistance } from "@/services/locationService";
 import { Place } from "@/types/place";
 import { callPhone, openNavigation, openWebsite } from "@/utils/navigation";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 
 function getCategoryLabel(category: Place["category"]): string {
   return CATEGORY_FILTERS.find((item) => item.id === category)?.label ?? category;
@@ -11,6 +13,8 @@ function getCategoryLabel(category: Place["category"]): string {
 
 export default function PlaceDetailsScreen() {
   const params = useLocalSearchParams<{ id: string; data?: string }>();
+  const { isFavorite, toggleFavorite, recordVisit } = useSavedPlaces();
+  const [fav, setFav] = useState(false);
 
   let place: Place | null = null;
   try {
@@ -18,6 +22,12 @@ export default function PlaceDetailsScreen() {
   } catch {
     place = null;
   }
+
+  useEffect(() => {
+    if (!place) return;
+    recordVisit(place);
+    setFav(isFavorite(place.id));
+  }, [place, isFavorite, recordVisit]);
 
   if (!place) {
     return (
@@ -29,9 +39,19 @@ export default function PlaceDetailsScreen() {
 
   const selectedPlace = place;
 
+  const handleToggleFavorite = async () => {
+    const nowFav = await toggleFavorite(selectedPlace);
+    setFav(nowFav);
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.name}>{selectedPlace.name}</Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.name}>{selectedPlace.name}</Text>
+        <Pressable onPress={handleToggleFavorite} hitSlop={8}>
+          <Text style={styles.favIcon}>{fav ? "⭐" : "☆"}</Text>
+        </Pressable>
+      </View>
 
       <View style={styles.badges}>
         <Text style={styles.badge}>{getCategoryLabel(selectedPlace.category)}</Text>
@@ -118,10 +138,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#0f172a",
   },
   name: {
+    flex: 1,
     color: "#f8fafc",
     fontSize: 28,
     fontWeight: "800",
     marginBottom: 12,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  favIcon: {
+    fontSize: 28,
+    marginTop: 4,
   },
   badges: {
     flexDirection: "row",

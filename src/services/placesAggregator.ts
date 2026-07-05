@@ -1,27 +1,76 @@
 import { fetchGooglePlaces } from "@/services/googlePlacesService";
 import { searchNearbyFromLocalDb } from "@/services/localDatabaseService";
+import { isDeviceOnline } from "@/services/networkService";
 import { fetchOsmPlaces } from "@/services/osmService";
 import { getDistanceMeters } from "@/services/locationService";
 import { SERVICE_PRIORITY_CATEGORIES } from "@/constants/emergency";
 import { Place, PlaceCategory, UserLocation } from "@/types/place";
 
+export interface FetchPlacesResult {
+  places: Place[];
+  isOffline: boolean;
+  localCount: number;
+  onlineCount: number;
+}
+
+const ONLINE_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+  ]);
+}
+
+/** Офлайн-перший пошук: локальна база завжди, онлайн — якщо є мережа */
 export async function fetchNearbyPlaces(
   location: UserLocation,
   radiusMeters: number
-): Promise<Place[]> {
-  const [localPlaces, googlePlaces, osmPlaces] = await Promise.allSettled([
-    searchNearbyFromLocalDb(location, radiusMeters),
-    fetchGooglePlaces(location, radiusMeters),
-    fetchOsmPlaces(location, radiusMeters),
+): Promise<FetchPlacesResult> {
+  const localPlaces = await searchNearbyFromLocalDb(location, radiusMeters, "all", 1000);
+
+  const online = await isDeviceOnline();
+  if (!online) {
+    return {
+      places: localPlaces,
+      isOffline: true,
+      localCount: localPlaces.length,
+      onlineCount: 0,
+    };
+  }
+
+  const [googleResult, osmResult] = await Promise.allSettled([
+    withTimeout(fetchGooglePlaces(location, radiusMeters), ONLINE_TIMEOUT_MS),
+    withTimeout(fetchOsmPlaces(location, radiusMeters), ONLINE_TIMEOUT_MS),
   ]);
 
-  const places: Place[] = [
-    ...(localPlaces.status === "fulfilled" ? localPlaces.value : []),
-    ...(googlePlaces.status === "fulfilled" ? googlePlaces.value : []),
-    ...(osmPlaces.status === "fulfilled" ? osmPlaces.value : []),
+  const onlinePlaces: Place[] = [
+    ...(googleResult.status === "fulfilled" ? googleResult.value : []),
+    ...(osmResult.status === "fulfilled" ? osmResult.value : []),
   ];
 
-  return enrichWithDistance(dedupePlaces(places), location);
+  const merged = enrichWithDistance(
+    dedupePlaces([...localPlaces, ...onlinePlaces]),
+    location
+  );
+
+  const onlineOnly = merged.filter((p) => p.source !== "local").length;
+
+  return {
+    places: merged,
+    isOffline: onlinePlaces.length === 0 && localPlaces.length > 0,
+    localCount: localPlaces.length,
+    onlineCount: onlineOnly,
+  };
+}
+
+export function findNearestByCategory(
+  places: Place[],
+  category: PlaceCategory
+): Place | null {
+  const filtered = places.filter((p) => p.category === category);
+  if (filtered.length === 0) return null;
+  return [...filtered].sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0))[0];
 }
 
 export function filterPlaces(places: Place[], category: PlaceCategory): Place[] {
@@ -44,7 +93,6 @@ export function filterPlacesByQuery(places: Place[], query: string): Place[] {
   );
 }
 
-/** Найближчий сервіс для екстреної ситуації (СТО, евакуатор, шини…) */
 export function findNearestService(places: Place[]): Place | null {
   if (places.length === 0) return null;
 

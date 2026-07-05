@@ -20,11 +20,10 @@ export default function AboutScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Можливості</Text>
-        <Text style={styles.bullet}>• Екстрені виклики 112, 102, 103, 104</Text>
-        <Text style={styles.bullet}>• Найближчий сервіс на карті</Text>
-        <Text style={styles.bullet}>• Фільтр за відстанню до 50 км</Text>
-        <Text style={styles.bullet}>• Автопошук у полі / лісі (до 100 км)</Text>
-        <Text style={styles.bullet}>• Маршрут через Google Maps</Text>
+    <Text style={styles.bullet}>• Офлайн-база СТО без інтернету (до 100 км)</Text>
+    <Text style={styles.bullet}>• Екран «Поломка» — евакуатор, СТО, 112</Text>
+    <Text style={styles.bullet}>• Маршрут на карті в додатку</Text>
+    <Text style={styles.bullet}>• Улюблені та нещодавні місця</Text>
       </View>
 
       <Pressable style={styles.linkRow} onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}>

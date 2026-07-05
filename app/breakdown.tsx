@@ -1,0 +1,246 @@
+import { useMemo } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { router } from "expo-router";
+import { EmergencyPanel } from "@/components/EmergencyPanel";
+import { OfflineBanner } from "@/components/OfflineBanner";
+import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
+import { useSavedPlaces } from "@/hooks/useSavedPlaces";
+import { useUserLocation } from "@/hooks/useUserLocation";
+import { MAX_COVERAGE_RADIUS_METERS } from "@/constants/categories";
+import { findNearestByCategory } from "@/services/placesAggregator";
+import { formatDistance } from "@/services/locationService";
+import { Place } from "@/types/place";
+import { callPhone } from "@/utils/navigation";
+
+function ServiceCard({
+  title,
+  emoji,
+  place,
+  onRoute,
+  onDetails,
+}: {
+  title: string;
+  emoji: string;
+  place: Place | null;
+  onRoute: (p: Place) => void;
+  onDetails: (p: Place) => void;
+}) {
+  if (!place) {
+    return (
+      <View style={styles.cardEmpty}>
+        <Text style={styles.cardEmoji}>{emoji}</Text>
+        <Text style={styles.cardTitle}>{title}</Text>
+        <Text style={styles.cardEmptyText}>Не знайдено в радіусі 100 км</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardEmoji}>{emoji}</Text>
+      <Text style={styles.cardTitle}>{title}</Text>
+      <Text style={styles.cardName} numberOfLines={2}>
+        {place.name}
+      </Text>
+      <Text style={styles.cardDistance}>{formatDistance(place.distanceMeters)}</Text>
+      {place.phone ? (
+        <Pressable onPress={() => callPhone(place.phone!)}>
+          <Text style={styles.cardPhone}>📞 {place.phone}</Text>
+        </Pressable>
+      ) : null}
+      <View style={styles.cardActions}>
+        <Pressable style={styles.routeBtn} onPress={() => onRoute(place)}>
+          <Text style={styles.routeBtnText}>Маршрут</Text>
+        </Pressable>
+        <Pressable style={styles.detailBtn} onPress={() => onDetails(place)}>
+          <Text style={styles.detailBtnText}>Деталі</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+export default function BreakdownScreen() {
+  const { location, loading: locLoading } = useUserLocation();
+  const { places, isOffline, localCount, onlineCount, loading } = useNearbyPlaces(location, {
+    radiusMeters: MAX_COVERAGE_RADIUS_METERS,
+  });
+  const { favorites, recent } = useSavedPlaces();
+
+  const nearestTow = useMemo(() => findNearestByCategory(places, "towing"), [places]);
+  const nearestSto = useMemo(() => findNearestByCategory(places, "sto"), [places]);
+  const nearestTires = useMemo(() => findNearestByCategory(places, "tires"), [places]);
+
+  const goRoute = (place: Place) => {
+    router.navigate({
+      pathname: "/",
+      params: { buildRoute: JSON.stringify(place) },
+    });
+  };
+
+  const goDetails = (place: Place) => {
+    router.push({
+      pathname: "/place/[id]",
+      params: { id: place.id, data: JSON.stringify(place) },
+    });
+  };
+
+  if (locLoading || !location) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color="#60a5fa" size="large" />
+        <Text style={styles.loadingText}>Шукаємо допомогу поруч...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={styles.headline}>🆘 Поломка на дорозі</Text>
+      <Text style={styles.subhead}>
+        Екстрені служби та найближчі сервіси в радіусі 100 км. Працює навіть без інтернету.
+      </Text>
+
+      <EmergencyPanel />
+
+      <OfflineBanner
+        isOffline={isOffline}
+        localCount={localCount}
+        onlineCount={onlineCount}
+        variant="inline"
+      />
+
+      {loading ? (
+        <ActivityIndicator color="#60a5fa" style={{ marginVertical: 20 }} />
+      ) : (
+        <>
+          <ServiceCard
+            title="Евакуатор"
+            emoji="🛻"
+            place={nearestTow}
+            onRoute={goRoute}
+            onDetails={goDetails}
+          />
+          <ServiceCard
+            title="СТО"
+            emoji="🔧"
+            place={nearestSto}
+            onRoute={goRoute}
+            onDetails={goDetails}
+          />
+          <ServiceCard
+            title="Шиномонтаж"
+            emoji="🛞"
+            place={nearestTires}
+            onRoute={goRoute}
+            onDetails={goDetails}
+          />
+        </>
+      )}
+
+      {favorites.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>⭐ Улюблені</Text>
+          {favorites.map((p) => (
+            <Pressable key={p.id} style={styles.listItem} onPress={() => goDetails(p)}>
+              <Text style={styles.listName}>{p.name}</Text>
+              <Text style={styles.listMeta}>{formatDistance(p.distanceMeters)}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      {recent.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🕐 Нещодавні</Text>
+          {recent.map((p) => (
+            <Pressable key={p.id} style={styles.listItem} onPress={() => goDetails(p)}>
+              <Text style={styles.listName}>{p.name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      <Pressable style={styles.mapLink} onPress={() => router.push("/")}>
+        <Text style={styles.mapLinkText}>🗺 Відкрити карту</Text>
+      </Pressable>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#0f172a" },
+  content: { padding: 16, paddingBottom: 40 },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0f172a",
+  },
+  loadingText: { color: "#94a3b8", marginTop: 12 },
+  headline: { color: "#f87171", fontSize: 22, fontWeight: "800", marginBottom: 6 },
+  subhead: { color: "#94a3b8", lineHeight: 20, marginBottom: 12 },
+  card: {
+    backgroundColor: "#1e293b",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  cardEmpty: {
+    backgroundColor: "#172554",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "#1e3a5f",
+  },
+  cardEmoji: { fontSize: 28, marginBottom: 4 },
+  cardTitle: { color: "#93c5fd", fontSize: 12, fontWeight: "700", textTransform: "uppercase" },
+  cardName: { color: "#f8fafc", fontSize: 16, fontWeight: "700", marginTop: 4 },
+  cardDistance: { color: "#60a5fa", fontSize: 14, fontWeight: "700", marginTop: 4 },
+  cardPhone: { color: "#4ade80", fontSize: 14, marginTop: 6, fontWeight: "600" },
+  cardEmptyText: { color: "#64748b", marginTop: 6 },
+  cardActions: { flexDirection: "row", gap: 8, marginTop: 12 },
+  routeBtn: {
+    flex: 1,
+    backgroundColor: "#2563eb",
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  routeBtnText: { color: "#fff", fontWeight: "700" },
+  detailBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#475569",
+  },
+  detailBtnText: { color: "#cbd5e1", fontWeight: "600" },
+  section: { marginTop: 16 },
+  sectionTitle: { color: "#f8fafc", fontWeight: "700", marginBottom: 8 },
+  listItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#1e293b",
+  },
+  listName: { color: "#e2e8f0", fontWeight: "600" },
+  listMeta: { color: "#64748b", fontSize: 12, marginTop: 2 },
+  mapLink: {
+    marginTop: 20,
+    backgroundColor: "#334155",
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  mapLinkText: { color: "#f8fafc", fontWeight: "700" },
+});

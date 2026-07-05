@@ -6,9 +6,11 @@ import { Coordinates, Place, UserLocation } from "@/types/place";
 
 interface PlacesMapProps {
   location: UserLocation;
+  heading?: number | null;
   places: Place[];
   routeCoordinates?: Coordinates[];
   routeDestination?: Place | null;
+  isNavigating?: boolean;
   onPlacePress: (place: Place) => void;
 }
 
@@ -40,9 +42,11 @@ function getCategoryEmoji(category: Place["category"]): string {
 
 export function PlacesMap({
   location,
+  heading,
   places,
   routeCoordinates,
   routeDestination,
+  isNavigating = false,
   onPlacePress,
 }: PlacesMapProps) {
   const mapRef = useRef<MapView>(null);
@@ -51,14 +55,14 @@ export function PlacesMap({
     () => ({
       latitude: location.latitude,
       longitude: location.longitude,
-      latitudeDelta: 0.08,
-      longitudeDelta: 0.08,
+      latitudeDelta: isNavigating ? 0.02 : 0.15,
+      longitudeDelta: isNavigating ? 0.02 : 0.15,
     }),
-    [location.latitude, location.longitude]
+    [location.latitude, location.longitude, isNavigating]
   );
 
   useEffect(() => {
-    if (routeCoordinates && routeCoordinates.length > 1) {
+    if (routeCoordinates && routeCoordinates.length > 1 && !isNavigating) {
       mapRef.current?.fitToCoordinates(
         [
           { latitude: location.latitude, longitude: location.longitude },
@@ -67,7 +71,20 @@ export function PlacesMap({
         { edgePadding: { top: 100, right: 40, bottom: 100, left: 40 }, animated: true }
       );
     }
-  }, [routeCoordinates, location.latitude, location.longitude]);
+  }, [routeCoordinates, isNavigating, location.latitude, location.longitude]);
+
+  useEffect(() => {
+    if (!isNavigating) return;
+    mapRef.current?.animateCamera(
+      {
+        center: { latitude: location.latitude, longitude: location.longitude },
+        pitch: 0,
+        heading: heading ?? 0,
+        zoom: 16,
+      },
+      { duration: 800 }
+    );
+  }, [location.latitude, location.longitude, heading, isNavigating]);
 
   return (
     <View style={styles.container}>
@@ -76,16 +93,26 @@ export function PlacesMap({
         style={styles.map}
         provider={PROVIDER_GOOGLE}
         initialRegion={region}
-        showsUserLocation
-        showsMyLocationButton
+        showsUserLocation={!isNavigating}
+        showsMyLocationButton={!isNavigating}
+        followsUserLocation={isNavigating}
+        showsCompass={isNavigating}
       >
+        {isNavigating ? (
+          <Marker
+            coordinate={location}
+            anchor={{ x: 0.5, y: 0.5 }}
+            flat
+            rotation={heading ?? 0}
+          >
+            <View style={styles.navMarker}>
+              <View style={styles.navArrow} />
+            </View>
+          </Marker>
+        ) : null}
+
         {routeCoordinates && routeCoordinates.length > 1 ? (
-          <Polyline
-            coordinates={routeCoordinates}
-            strokeColor="#2563eb"
-            strokeWidth={5}
-            lineDashPattern={undefined}
-          />
+          <Polyline coordinates={routeCoordinates} strokeColor="#2563eb" strokeWidth={5} />
         ) : null}
 
         {places.map((place) => {
@@ -117,12 +144,8 @@ export function PlacesMap({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  map: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  map: { flex: 1 },
   marker: {
     width: 32,
     height: 32,
@@ -138,7 +161,27 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 3,
   },
-  markerEmoji: {
-    fontSize: 15,
+  markerEmoji: { fontSize: 15 },
+  navMarker: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#2563eb",
+    borderWidth: 3,
+    borderColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 6,
+  },
+  navArrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderBottomWidth: 12,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderBottomColor: "#fff",
+    marginTop: -4,
   },
 });

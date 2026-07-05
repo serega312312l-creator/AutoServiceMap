@@ -1,0 +1,38 @@
+---
+description: Windows CMD/PowerShell і EAS Build для AVTOGID
+alwaysApply: true
+---
+
+# Windows + EAS — команди
+
+Користувач на **Windows 10**. Часто працює в **CMD** (не PowerShell).
+
+## Команди для користувача
+
+- Давати **по одному рядку**, окремими блоками — не злипати `cd` і `npx`
+- Спочатку перейти в проєкт:
+  `cd /d "C:\Users\Laptoper USA\Projects\AutoServiceMap"`
+- Якщо PowerShell блокує `npx` (execution policy) — CMD або:
+  `& "C:\Program Files\nodejs\npx.cmd" eas-cli@latest ...`
+- Без Git на ПК: перед build
+  `set EAS_NO_VCS=1`
+
+## EAS
+
+```cmd
+npx eas-cli@latest login
+npx eas-cli@latest build --platform android --profile preview
+npx eas-cli@latest build --platform android --profile production
+npx eas-cli@latest submit --platform android --profile production
+```
+
+## Відомі проблеми (вже вирішені в проєкті)
+
+- `.npmrc` з `legacy-peer-deps=true` — для `npm ci` на EAS
+- `babel-preset-expo` у devDependencies — обов'язково для bundle
+- `extra.eas.projectId` у `app.config.js` — UUID проєкту Expo
+
+## EAS env (preview + production)
+
+Після першої збірки додати ключі:
+`eas env:create --name GOOGLE_MAPS_API_KEY --environment preview --visibility secret`

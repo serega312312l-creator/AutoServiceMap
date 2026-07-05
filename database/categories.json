@@ -1,0 +1,16 @@
+[
+  { "id": "sto", "name_uk": "СТО", "name_en": "Car repair", "emoji": "🔧", "sort_order": 1 },
+  { "id": "autoshop", "name_uk": "Автомагазин", "name_en": "Auto parts shop", "emoji": "🛒", "sort_order": 2 },
+  { "id": "tires", "name_uk": "Шини", "name_en": "Tyre shop", "emoji": "🛞", "sort_order": 3 },
+  { "id": "car_dealer", "name_uk": "Автосалон", "name_en": "Car dealer", "emoji": "🚗", "sort_order": 4 },
+  { "id": "car_wash", "name_uk": "Автомийка", "name_en": "Car wash", "emoji": "🫧", "sort_order": 5 },
+  { "id": "fuel", "name_uk": "АЗС", "name_en": "Fuel station", "emoji": "⛽", "sort_order": 6 },
+  { "id": "ev_charging", "name_uk": "Зарядка EV", "name_en": "EV charging", "emoji": "⚡", "sort_order": 7 },
+  { "id": "diagnostics", "name_uk": "Діагностика", "name_en": "Vehicle inspection", "emoji": "🖥️", "sort_order": 8 },
+  { "id": "towing", "name_uk": "Евакуатор", "name_en": "Towing", "emoji": "🚛", "sort_order": 9 },
+  { "id": "body_shop", "name_uk": "Кузовний ремонт", "name_en": "Body shop", "emoji": "🎨", "sort_order": 10 },
+  { "id": "motorcycle", "name_uk": "Мото", "name_en": "Motorcycle service", "emoji": "🏍️", "sort_order": 11 },
+  { "id": "truck_service", "name_uk": "Вантажівки", "name_en": "Truck service", "emoji": "🚚", "sort_order": 12 },
+  { "id": "parking", "name_uk": "Паркінг", "name_en": "Parking", "emoji": "🅿️", "sort_order": 13 },
+  { "id": "other_auto", "name_uk": "Інше авто", "name_en": "Other auto", "emoji": "🔩", "sort_order": 14 }
+]

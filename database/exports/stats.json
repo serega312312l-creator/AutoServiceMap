@@ -1,0 +1,156 @@
+{
+  "total": 13173,
+  "generated_at": "2026-07-02T14:25:48.072Z",
+  "by_category": [
+    {
+      "category_id": "fuel",
+      "count": 5638
+    },
+    {
+      "category_id": "sto",
+      "count": 2527
+    },
+    {
+      "category_id": "autoshop",
+      "count": 1702
+    },
+    {
+      "category_id": "car_wash",
+      "count": 1169
+    },
+    {
+      "category_id": "car_dealer",
+      "count": 757
+    },
+    {
+      "category_id": "tires",
+      "count": 639
+    },
+    {
+      "category_id": "ev_charging",
+      "count": 548
+    },
+    {
+      "category_id": "motorcycle",
+      "count": 98
+    },
+    {
+      "category_id": "diagnostics",
+      "count": 84
+    },
+    {
+      "category_id": "body_shop",
+      "count": 6
+    },
+    {
+      "category_id": "truck_service",
+      "count": 5
+    }
+  ],
+  "by_region": [
+    {
+      "region_name": "м. Київ",
+      "count": 1218
+    },
+    {
+      "region_name": "Львівська область",
+      "count": 1039
+    },
+    {
+      "region_name": "Дніпропетровська область",
+      "count": 1008
+    },
+    {
+      "region_name": "Київська область",
+      "count": 978
+    },
+    {
+      "region_name": "Донецька область",
+      "count": 955
+    },
+    {
+      "region_name": "Автономна Республіка Крим",
+      "count": 735
+    },
+    {
+      "region_name": "Одеська область",
+      "count": 702
+    },
+    {
+      "region_name": "Полтавська область",
+      "count": 573
+    },
+    {
+      "region_name": "Івано-Франківська область",
+      "count": 534
+    },
+    {
+      "region_name": "Вінницька область",
+      "count": 472
+    },
+    {
+      "region_name": "Черкаська область",
+      "count": 411
+    },
+    {
+      "region_name": "Закарпатська область",
+      "count": 403
+    },
+    {
+      "region_name": "Хмельницька область",
+      "count": 402
+    },
+    {
+      "region_name": "Запорізька область",
+      "count": 401
+    },
+    {
+      "region_name": "Тернопільська область",
+      "count": 376
+    },
+    {
+      "region_name": "Луганська область",
+      "count": 329
+    },
+    {
+      "region_name": "Волинська область",
+      "count": 329
+    },
+    {
+      "region_name": "Житомирська область",
+      "count": 308
+    },
+    {
+      "region_name": "Кіровоградська область",
+      "count": 293
+    },
+    {
+      "region_name": "Миколаївська область",
+      "count": 287
+    },
+    {
+      "region_name": "Рівненська область",
+      "count": 272
+    },
+    {
+      "region_name": "Чернігівська область",
+      "count": 251
+    },
+    {
+      "region_name": "м. Севастополь",
+      "count": 237
+    },
+    {
+      "region_name": "Чернівецька область",
+      "count": 230
+    },
+    {
+      "region_name": "Сумська область",
+      "count": 216
+    },
+    {
+      "region_name": "Херсонська область",
+      "count": 214
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+---
+description: AVTOGID — стек, конвенції, мова UI
+alwaysApply: true
+---
+
+# AVTOGID — проєкт
+
+Мобільний додаток для пошуку СТО, автомагазинів і шиномонтажів поруч (карта + список).
+
+## Стек
+
+- Expo SDK 54, TypeScript, expo-router
+- `com.avtogid.app`, slug `avtogid`
+- EAS project: `@serega312312/avtogid`
+- Карта: `react-native-maps` + Google Maps SDK (Android)
+- Дані: OpenStreetMap + Google Places API (New)
+
+## Конвенції коду
+
+- UI-тексти для користувача — **українською**
+- Ключі: `GOOGLE_MAPS_API_KEY`, `GOOGLE_PLACES_API_KEY` у `.env` (не в git) і в EAS env для збірок
+- Конфіг: `app.config.js` (динамічний), не `app.json`
+- Збірки: `preview` = APK (тест), `production` = AAB (Play Market)
+
+## Не робити без запиту
+
+- Не комітити `.env`, ключі API, keystore
+- Не плутати з ігровими проєктами (Unity/Godot — окремий стек)
+- Не додавати зайві markdown-файли без запиту користувача

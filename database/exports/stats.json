@@ -1,42 +1,42 @@
 {
-  "total": 13173,
-  "generated_at": "2026-07-02T14:25:48.072Z",
+  "total": 14123,
+  "generated_at": "2026-07-05T10:15:42.172Z",
   "by_category": [
     {
       "category_id": "fuel",
-      "count": 5638
+      "count": 6015
     },
     {
       "category_id": "sto",
-      "count": 2527
+      "count": 2722
     },
     {
       "category_id": "autoshop",
-      "count": 1702
+      "count": 1805
     },
     {
       "category_id": "car_wash",
-      "count": 1169
+      "count": 1252
     },
     {
       "category_id": "car_dealer",
-      "count": 757
+      "count": 823
     },
     {
       "category_id": "tires",
-      "count": 639
+      "count": 691
     },
     {
       "category_id": "ev_charging",
-      "count": 548
+      "count": 616
     },
     {
       "category_id": "motorcycle",
-      "count": 98
+      "count": 100
     },
     {
       "category_id": "diagnostics",
-      "count": 84
+      "count": 88
     },
     {
       "category_id": "body_shop",
@@ -67,6 +67,10 @@
     {
       "region_name": "Донецька область",
       "count": 955
+    },
+    {
+      "region_name": "Харківська область",
+      "count": 950
     },
     {
       "region_name": "Автономна Республіка Крим",

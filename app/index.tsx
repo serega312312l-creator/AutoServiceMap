@@ -9,6 +9,14 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { DEFAULT_RADIUS_METERS } from "@/constants/categories";
 import { SERVICE_PRIORITY_CATEGORIES } from "@/constants/emergency";
+import { filterFuelPlaces } from "@/constants/fuel";
+import { useDatabaseUpdate } from "@/hooks/useDatabaseUpdate";
+import { AlongRouteToggle } from "@/components/AlongRouteToggle";
+import { FuelTypeFilter } from "@/components/FuelTypeFilter";
+import { filterAlongRouteMode } from "@/services/alongRouteService";
+import { isNightMapEnabled, isAlongRouteDefault, setAlongRouteDefault } from "@/services/mapPreferencesService";
+import { saveRouteCache, loadRouteCache } from "@/services/routeCacheService";
+import { FuelType } from "@/types/car";
 import { DeadZoneBanner } from "@/components/DeadZoneBanner";
 import { DistanceFilter } from "@/components/DistanceFilter";
 import { FilterBar } from "@/components/FilterBar";
@@ -59,6 +67,10 @@ export default function HomeScreen() {
   const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
   const [routeLoading, setRouteLoading] = useState(false);
   const [deadZone, setDeadZone] = useState<DeadZoneWarning | null>(null);
+  const [nightMap, setNightMap] = useState(true);
+  const [alongRoute, setAlongRoute] = useState(false);
+  const [fuelFilter, setFuelFilter] = useState<FuelType | "all">("all");
+  const [routeCached, setRouteCached] = useState(false);
 
   const isNavigating = routePlace != null;
   const { isPremium } = usePremium();
@@ -70,10 +82,13 @@ export default function HomeScreen() {
     location,
     heading,
     loading: locationLoading,
+    locating,
     error: locationError,
     permissionDenied,
     refresh: refreshLocation,
   } = useUserLocation({ navigationMode: isNavigating });
+
+  const { status: dbUpdateStatus } = useDatabaseUpdate(location);
 
   const {
     places,
@@ -94,10 +109,29 @@ export default function HomeScreen() {
 
   const filteredPlaces = useMemo(() => {
     let result = filterPlaces(carFilteredPlaces, selectedCategory);
+    if (selectedCategory === "fuel" || selectedCategory === "all") {
+      result = filterFuelPlaces(result, fuelFilter);
+    }
     result = filterPlacesByDistance(result, radiusMeters);
     result = filterPlacesByQuery(result, searchQuery);
+    if (alongRoute && routeInfo?.coordinates) {
+      result = filterAlongRouteMode(result, routeInfo.coordinates, true);
+    }
     return result;
-  }, [carFilteredPlaces, selectedCategory, radiusMeters, searchQuery]);
+  }, [carFilteredPlaces, selectedCategory, radiusMeters, searchQuery, fuelFilter, alongRoute, routeInfo?.coordinates]);
+
+  useEffect(() => {
+    isNightMapEnabled().then(setNightMap);
+    isAlongRouteDefault().then(setAlongRoute);
+  }, []);
+
+  const toggleAlongRoute = useCallback(() => {
+    setAlongRoute((prev) => {
+      const next = !prev;
+      setAlongRouteDefault(next);
+      return next;
+    });
+  }, []);
 
   const nearestService = useMemo(() => {
     for (const cat of SERVICE_PRIORITY_CATEGORIES) {
@@ -124,6 +158,10 @@ export default function HomeScreen() {
       setSelectedRouteIndex(0);
       setRouteInfo(routes[0] ?? null);
       setRouteLoading(false);
+      if (routes[0]) {
+        await saveRouteCache(place, routes[0]);
+        setRouteCached(true);
+      }
     },
     [location, recordVisit, logRoute, isPremium]
   );
@@ -133,6 +171,7 @@ export default function HomeScreen() {
     setRouteInfo(null);
     setRouteAlternatives([]);
     setRouteLoading(false);
+    setRouteCached(false);
   }, []);
 
   const selectRoute = useCallback(
@@ -142,6 +181,16 @@ export default function HomeScreen() {
     },
     [routeAlternatives]
   );
+
+  useEffect(() => {
+    loadRouteCache().then((c) => {
+      if (c && !params.buildRoute) {
+        setRoutePlace(c.place);
+        setRouteInfo(c.route);
+        setRouteCached(true);
+      }
+    });
+  }, [params.buildRoute]);
 
   useEffect(() => {
     if (!params.buildRoute || !location) return;
@@ -190,7 +239,9 @@ export default function HomeScreen() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#60a5fa" />
-        <Text style={styles.loadingText}>Визначаємо ваше місцезнаходження...</Text>
+        <Text style={styles.loadingText}>
+          {locating ? "Визначаємо GPS (працює без інтернету)..." : "Визначаємо ваше місцезнаходження..."}
+        </Text>
       </View>
     );
   }
@@ -228,6 +279,9 @@ export default function HomeScreen() {
         <OfflineBanner isOffline={isOffline} localCount={localCount} onlineCount={onlineCount} variant="inline" />
         <DistanceFilter selectedMeters={radiusMeters} onSelect={setRadiusMeters} />
         <FilterBar selected={selectedCategory} onSelect={setSelectedCategory} />
+        {(selectedCategory === "fuel" || selectedCategory === "all") ? (
+          <FuelTypeFilter selected={fuelFilter} onSelect={setFuelFilter} />
+        ) : null}
         <SearchBar value={searchQuery} onChange={setSearchQuery} />
         {nearestService ? (
           <Pressable style={styles.nearestListBtn} onPress={() => buildRoute(nearestService)}>
@@ -253,8 +307,23 @@ export default function HomeScreen() {
         routeCoordinates={routeInfo?.coordinates}
         routeDestination={routePlace}
         isNavigating={isNavigating}
+        nightMap={nightMap}
         onPlacePress={handlePlacePress}
       />
+
+      {routeInfo?.coordinates ? (
+        <AlongRouteToggle
+          enabled={alongRoute}
+          count={filteredPlaces.length}
+          onToggle={toggleAlongRoute}
+        />
+      ) : null}
+
+      {(selectedCategory === "fuel" || selectedCategory === "all") && viewMode === "map" ? (
+        <View style={styles.fuelFilterWrap}>
+          <FuelTypeFilter selected={fuelFilter} onSelect={setFuelFilter} />
+        </View>
+      ) : null}
 
       <DeadZoneBanner warning={deadZone} onPremiumPress={() => router.push("/offline-maps")} />
 
@@ -267,9 +336,13 @@ export default function HomeScreen() {
         onRadiusChange={setRadiusMeters}
         placeCount={filteredPlaces.length}
         onRefresh={handleRefresh}
+        isOffline={isOffline}
+        localCount={localCount}
+        onlineCount={onlineCount}
+        locating={locating}
+        locationAccuracy={location.accuracy}
+        dbUpdateMessage={dbUpdateStatus?.downloading ? dbUpdateStatus.message : dbUpdateStatus?.message}
       />
-
-      <OfflineBanner isOffline={isOffline} localCount={localCount} onlineCount={onlineCount} />
 
       {!routePlace && nearestService ? (
         <NearestNowButton place={nearestService} onPress={buildRoute} />
@@ -288,6 +361,10 @@ export default function HomeScreen() {
         <Text style={styles.breakdownFabText}>🆘</Text>
       </Pressable>
 
+      <Pressable style={styles.stressFab} onPress={() => router.push("/stress")}>
+        <Text style={styles.stressFabText}>⚡</Text>
+      </Pressable>
+
       {routeAlternatives.length > 1 ? (
         <RouteAlternativesBar
           routes={routeAlternatives}
@@ -302,6 +379,7 @@ export default function HomeScreen() {
           distanceMeters={routeInfo?.distanceMeters ?? routePlace.distanceMeters ?? 0}
           durationSeconds={routeInfo?.durationSeconds ?? 0}
           loading={routeLoading}
+          cached={routeCached && !routeLoading}
           onClose={clearRoute}
         />
       ) : null}
@@ -413,4 +491,27 @@ const styles = StyleSheet.create({
   },
   breakdownFabUp: { bottom: 100 },
   breakdownFabText: { fontSize: 22 },
+  stressFab: {
+    position: "absolute",
+    bottom: 24,
+    left: 76,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#7f1d1d",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 6,
+    zIndex: 20,
+    borderWidth: 2,
+    borderColor: "#fca5a5",
+  },
+  stressFabText: { fontSize: 18 },
+  fuelFilterWrap: {
+    position: "absolute",
+    top: 148,
+    left: 0,
+    right: 0,
+    zIndex: 12,
+  },
 });

@@ -29,12 +29,12 @@ export function DeadZoneBanner({ warning, onPremiumPress }: DeadZoneBannerProps)
 const styles = StyleSheet.create({
   banner: {
     position: "absolute",
-    top: 56,
+    bottom: 150,
     left: 12,
     right: 12,
     borderRadius: 12,
     padding: 12,
-    zIndex: 14,
+    zIndex: 12,
   },
   high: { backgroundColor: "rgba(127, 29, 29, 0.95)", borderWidth: 1, borderColor: "#fca5a5" },
   medium: { backgroundColor: "rgba(120, 53, 15, 0.95)", borderWidth: 1, borderColor: "#fcd34d" },

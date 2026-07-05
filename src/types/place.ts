@@ -41,6 +41,7 @@ export interface Place {
   operator?: string;
   services?: string[];
   distanceMeters?: number;
+  phones?: string[];
   rating?: number;
   isOpen?: boolean;
 }

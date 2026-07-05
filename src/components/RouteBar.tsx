@@ -9,6 +9,7 @@ interface RouteBarProps {
   distanceMeters: number;
   durationSeconds: number;
   loading?: boolean;
+  cached?: boolean;
   onClose: () => void;
 }
 
@@ -17,6 +18,7 @@ export function RouteBar({
   distanceMeters,
   durationSeconds,
   loading,
+  cached,
   onClose,
 }: RouteBarProps) {
   return (
@@ -30,10 +32,10 @@ export function RouteBar({
         ) : (
           <Text style={styles.meta}>
             {formatDistance(distanceMeters)} · {formatRouteDuration(durationSeconds)}
+            {cached ? " · 💾 офлайн" : ""}
           </Text>
         )}
-      </View>
-      <Pressable style={styles.extBtn} onPress={() => openNavigation(place)}>
+      </View>      <Pressable style={styles.extBtn} onPress={() => openNavigation(place)}>
         <Text style={styles.extText}>GPS</Text>
       </Pressable>
       <Pressable style={styles.closeBtn} onPress={onClose}>

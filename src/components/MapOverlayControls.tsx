@@ -5,6 +5,8 @@ import {
   PRIMARY_CATEGORY_FILTERS,
 } from "@/constants/categories";
 import { DISTANCE_OPTIONS } from "@/constants/categories";
+import { OfflineBanner } from "@/components/OfflineBanner";
+import { formatDistance } from "@/services/locationService";
 
 interface MapOverlayControlsProps {
   viewMode: "map" | "list";
@@ -15,6 +17,12 @@ interface MapOverlayControlsProps {
   onRadiusChange: (meters: number) => void;
   placeCount: number;
   onRefresh: () => void;
+  isOffline?: boolean;
+  localCount?: number;
+  onlineCount?: number;
+  locating?: boolean;
+  locationAccuracy?: number;
+  dbUpdateMessage?: string | null;
 }
 
 export function MapOverlayControls({
@@ -26,6 +34,12 @@ export function MapOverlayControls({
   onRadiusChange,
   placeCount,
   onRefresh,
+  isOffline,
+  localCount = 0,
+  onlineCount = 0,
+  locating,
+  locationAccuracy,
+  dbUpdateMessage,
 }: MapOverlayControlsProps) {
   const categories = [...PRIMARY_CATEGORY_FILTERS, ...EXTRA_CATEGORY_FILTERS.slice(0, 3)];
 
@@ -90,6 +104,27 @@ export function MapOverlayControls({
               </Pressable>
             ))}
           </ScrollView>
+          <View style={styles.statusRow}>
+            <OfflineBanner
+              isOffline={isOffline ?? false}
+              localCount={localCount}
+              onlineCount={onlineCount}
+              variant="compact"
+            />
+            <Text style={[styles.gpsBadge, locating && styles.gpsSearching]}>
+              {locating
+                ? "📍 GPS…"
+                : locationAccuracy != null
+                  ? `📍 ±${formatDistance(locationAccuracy)}`
+                  : "📍 GPS"}
+            </Text>
+            {dbUpdateMessage ? (
+              <Text style={styles.dbUpdate} numberOfLines={1}>
+                {dbUpdateMessage.includes("Завантаж") ? "⬇ " : "🔄 "}
+                {dbUpdateMessage}
+              </Text>
+            ) : null}
+          </View>
         </>
       ) : null}
     </View>
@@ -193,5 +228,34 @@ const styles = StyleSheet.create({
   },
   chipTextActive: {
     color: "#fff",
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingTop: 2,
+    flexWrap: "wrap",
+  },
+  gpsBadge: {
+    color: "#4ade80",
+    fontSize: 10,
+    fontWeight: "700",
+    backgroundColor: "rgba(15, 23, 42, 0.92)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#14532d",
+    overflow: "hidden",
+  },
+  gpsSearching: {
+    color: "#fbbf24",
+    borderColor: "#422006",
+  },
+  dbUpdate: {
+    color: "#93c5fd",
+    fontSize: 10,
+    fontWeight: "600",
+    flex: 1,
   },
 });

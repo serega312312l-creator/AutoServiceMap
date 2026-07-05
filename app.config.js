@@ -1,5 +1,7 @@
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY ?? "YOUR_GOOGLE_MAPS_API_KEY";
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY ?? GOOGLE_MAPS_API_KEY;
+const DATABASE_MANIFEST_URL = process.env.DATABASE_MANIFEST_URL ?? "";
+const DATABASE_BASE_URL = process.env.DATABASE_BASE_URL ?? "";
 
 /** @type {import('expo/config').ExpoConfig} */
 module.exports = {
@@ -33,7 +35,7 @@ module.exports = {
       backgroundColor: "#0f172a",
     },
     package: "com.avtogid.app",
-    permissions: ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"],
+    permissions: ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "CAMERA"],
     config: {
       googleMaps: {
         apiKey: GOOGLE_MAPS_API_KEY,
@@ -51,9 +53,17 @@ module.exports = {
     ],
     "expo-asset",
     "expo-font",
+    [
+      "expo-image-picker",
+      {
+        cameraPermission: "AVTOGID потребує камеру для фото входу до СТО.",
+      },
+    ],
   ],
   extra: {
     googlePlacesApiKey: GOOGLE_PLACES_API_KEY,
+    databaseManifestUrl: DATABASE_MANIFEST_URL,
+    databaseBaseUrl: DATABASE_BASE_URL,
     router: {
       origin: false,
     },

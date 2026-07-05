@@ -22,6 +22,12 @@ export async function getAllRatings(): Promise<PlaceUserRating[]> {
   return getJson<PlaceUserRating[]>(RATINGS_KEY, []);
 }
 
+export async function getUserRatingForPlace(placeId: string): Promise<UserRatingValue | null> {
+  const ratings = await getAllRatings();
+  const mine = ratings.filter((r) => r.placeId === placeId).pop();
+  return mine?.value ?? null;
+}
+
 export async function ratePlace(placeId: string, value: UserRatingValue): Promise<void> {
   const ratings = await getAllRatings();
   const filtered = ratings.filter((r) => r.placeId !== placeId);

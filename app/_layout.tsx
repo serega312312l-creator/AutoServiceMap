@@ -6,6 +6,9 @@ import { ThemeProvider, useTheme } from "@/hooks/useTheme";
 function HeaderButtons() {
   return (
     <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+      <Pressable onPress={() => router.push("/stress")} hitSlop={8}>
+        <Text style={{ fontSize: 16 }}>⚡</Text>
+      </Pressable>
       <Pressable onPress={() => router.push("/breakdown")} hitSlop={8}>
         <Text style={{ fontSize: 16 }}>🆘</Text>
       </Pressable>
@@ -32,6 +35,8 @@ function ThemedStack() {
       >
         <Stack.Screen name="index" options={{ title: "AVTOGID", headerRight: () => <HeaderButtons /> }} />
         <Stack.Screen name="breakdown" options={{ title: "Поломка" }} />
+        <Stack.Screen name="stress" options={{ title: "Режим стресу" }} />
+        <Stack.Screen name="plan-route" options={{ title: "Мій маршрут" }} />
         <Stack.Screen name="place/[id]" options={{ title: "Деталі" }} />
         <Stack.Screen name="about" options={{ title: "Про додаток" }} />
         <Stack.Screen name="settings" options={{ title: "Налаштування" }} />

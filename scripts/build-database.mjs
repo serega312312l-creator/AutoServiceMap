@@ -133,6 +133,17 @@ function upsertPlace(db, place) {
   );
 }
 
+function extractPhone(tags) {
+  return (
+    tags.phone ||
+    tags["contact:phone"] ||
+    tags.mobile ||
+    tags["contact:mobile"] ||
+    tags["phone:mobile"] ||
+    null
+  );
+}
+
 function elementToPlace(element, regionNameById) {
   const tags = element.tags ?? {};
   const name = extractName(tags);
@@ -171,7 +182,7 @@ function elementToPlace(element, regionNameById) {
     region_name: regionName,
     postal_code: address.postalCode,
     full_address: address.fullAddress,
-    phone: tags.phone || tags["contact:phone"] || null,
+    phone: extractPhone(tags),
     email: tags.email || tags["contact:email"] || null,
     website: tags.website || tags["contact:website"] || null,
     opening_hours: tags.opening_hours || null,
@@ -285,7 +296,45 @@ function exportJson(db) {
   fs.writeFileSync(path.join(EXPORT_DIR, "places.json"), JSON.stringify(places));
   fs.writeFileSync(path.join(ASSETS_DATA_DIR, "places.json"), JSON.stringify(places));
 
+  exportRegionalFiles(places, stats.generated_at);
+
   return stats;
+}
+
+function exportRegionalFiles(places, version) {
+  const regionsDir = path.join(EXPORT_DIR, "regions");
+  fs.mkdirSync(regionsDir, { recursive: true });
+
+  const byRegion = new Map();
+  for (const place of places) {
+    const id = place.region_id || "unknown";
+    if (!byRegion.has(id)) byRegion.set(id, []);
+    byRegion.get(id).push(place);
+  }
+
+  const regions = [];
+  for (const [id, items] of byRegion) {
+    fs.writeFileSync(path.join(regionsDir, `${id}.json`), JSON.stringify(items));
+    regions.push({
+      id,
+      name: items[0]?.region_name ?? id,
+      count: items.length,
+      version,
+    });
+  }
+
+  regions.sort((a, b) => String(a.name).localeCompare(String(b.name), "uk"));
+
+  const manifest = {
+    version,
+    generated_at: version,
+    total: places.length,
+    base_url: process.env.DATABASE_BASE_URL ?? "",
+    regions,
+  };
+
+  fs.writeFileSync(path.join(EXPORT_DIR, "places-manifest.json"), JSON.stringify(manifest, null, 2));
+  fs.writeFileSync(path.join(ASSETS_DATA_DIR, "places-manifest.json"), JSON.stringify(manifest, null, 2));
 }
 
 function saveDatabase(db) {

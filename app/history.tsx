@@ -1,7 +1,9 @@
-import { Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, Share, StyleSheet, Text, View, Alert } from "react-native";
 import { useHistory } from "@/hooks/useHistory";
 import { usePremium } from "@/hooks/usePremium";
+import { useUserLocation } from "@/hooks/useUserLocation";
 import { PremiumGate } from "@/components/PremiumGate";
+import { exportInsurancePdf } from "@/services/pdfExportService";
 
 const TYPE_LABELS: Record<string, string> = {
   visit: "👁 Візит",
@@ -15,9 +17,23 @@ const TYPE_LABELS: Record<string, string> = {
 export default function HistoryScreen() {
   const { isPremium } = usePremium();
   const { entries, exportText, clear } = useHistory();
+  const { location } = useUserLocation();
 
   const handleExport = () => {
     Share.share({ message: exportText(), title: "AVTOGID історія" });
+  };
+
+  const handlePdf = async () => {
+    try {
+      await exportInsurancePdf({
+        entries,
+        location: location
+          ? { lat: location.latitude, lng: location.longitude }
+          : undefined,
+      });
+    } catch {
+      Alert.alert("Помилка", "Не вдалося створити PDF");
+    }
   };
 
   return (
@@ -25,7 +41,10 @@ export default function HistoryScreen() {
       <PremiumGate isPremium={isPremium} feature="Історія та експорт">
         <View style={styles.actions}>
           <Pressable style={styles.exportBtn} onPress={handleExport}>
-            <Text style={styles.exportText}>📤 Експорт для страхової</Text>
+            <Text style={styles.exportText}>📤 Текст</Text>
+          </Pressable>
+          <Pressable style={styles.pdfBtn} onPress={handlePdf}>
+            <Text style={styles.exportText}>📄 PDF</Text>
           </Pressable>
           <Pressable style={styles.clearBtn} onPress={clear}>
             <Text style={styles.clearText}>Очистити</Text>
@@ -55,6 +74,7 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   actions: { flexDirection: "row", gap: 8, marginBottom: 16 },
   exportBtn: { flex: 1, backgroundColor: "#2563eb", padding: 12, borderRadius: 10, alignItems: "center" },
+  pdfBtn: { flex: 1, backgroundColor: "#7c3aed", padding: 12, borderRadius: 10, alignItems: "center" },
   exportText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   clearBtn: { padding: 12, borderRadius: 10, borderWidth: 1, borderColor: "#334155" },
   clearText: { color: "#94a3b8", fontWeight: "600" },

@@ -3,6 +3,7 @@ import * as Location from "expo-location";
 import {
   getCurrentLocation,
   getDistanceMeters,
+  getLastKnownLocation,
   requestLocationPermission,
 } from "@/services/locationService";
 import { UserLocation } from "@/types/place";
@@ -11,8 +12,10 @@ import {
   NAVIGATION_UPDATE_THRESHOLD_METERS,
 } from "@/constants/categories";
 
+const FORCE_UPDATE_MS = 3000;
+const RETRY_MS = 8000;
+
 interface UseUserLocationOptions {
-  /** Частіше оновлювати позицію під час маршруту (як у Google Maps) */
   navigationMode?: boolean;
 }
 
@@ -20,6 +23,7 @@ interface UseUserLocationResult {
   location: UserLocation | null;
   heading: number | null;
   loading: boolean;
+  locating: boolean;
   error: string | null;
   permissionDenied: boolean;
   refresh: () => Promise<void>;
@@ -30,38 +34,55 @@ export function useUserLocation(options: UseUserLocationOptions = {}): UseUserLo
   const [location, setLocation] = useState<UserLocation | null>(null);
   const [heading, setHeading] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [locating, setLocating] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const lastLocationRef = useRef<UserLocation | null>(null);
+  const lastForceUpdateRef = useRef(0);
 
   const threshold = navigationMode
     ? NAVIGATION_UPDATE_THRESHOLD_METERS
     : LOCATION_UPDATE_THRESHOLD_METERS;
 
+  const applyLocation = useCallback((next: UserLocation) => {
+    lastLocationRef.current = next;
+    setLocation(next);
+    setLocating(false);
+    setError(null);
+  }, []);
+
   const refresh = useCallback(async () => {
     setLoading(true);
+    setLocating(true);
     setError(null);
 
     const granted = await requestLocationPermission();
     if (!granted) {
       setPermissionDenied(true);
       setLoading(false);
+      setLocating(false);
       setError("Дозвіл на геолокацію не надано");
       return;
     }
 
     setPermissionDenied(false);
 
+    const cached = await getLastKnownLocation();
+    if (cached) {
+      applyLocation(cached);
+    }
+
     try {
       const current = await getCurrentLocation();
-      setLocation(current);
-      lastLocationRef.current = current;
+      applyLocation(current);
     } catch {
-      setError("Не вдалося визначити ваше місцезнаходження");
+      if (!cached) {
+        setError("Увімкніть GPS — працює без інтернету");
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyLocation]);
 
   useEffect(() => {
     refresh();
@@ -69,6 +90,7 @@ export function useUserLocation(options: UseUserLocationOptions = {}): UseUserLo
 
   useEffect(() => {
     let subscription: Location.LocationSubscription | null = null;
+    let retryTimer: ReturnType<typeof setInterval> | null = null;
 
     const startWatching = async () => {
       const granted = await requestLocationPermission();
@@ -76,9 +98,9 @@ export function useUserLocation(options: UseUserLocationOptions = {}): UseUserLo
 
       subscription = await Location.watchPositionAsync(
         {
-          accuracy: navigationMode ? Location.Accuracy.High : Location.Accuracy.Balanced,
-          distanceInterval: navigationMode ? 10 : 50,
-          timeInterval: navigationMode ? 3000 : 10000,
+          accuracy: Location.Accuracy.High,
+          distanceInterval: navigationMode ? 5 : 10,
+          timeInterval: navigationMode ? 2000 : 3000,
         },
         (position) => {
           const next: UserLocation = {
@@ -91,23 +113,39 @@ export function useUserLocation(options: UseUserLocationOptions = {}): UseUserLo
             setHeading(position.coords.heading);
           }
 
+          const now = Date.now();
           const last = lastLocationRef.current;
-          if (last && getDistanceMeters(last, next) < threshold) {
-            return;
-          }
+          const moved = !last || getDistanceMeters(last, next) >= threshold;
+          const forceDue = now - lastForceUpdateRef.current >= FORCE_UPDATE_MS;
 
-          lastLocationRef.current = next;
-          setLocation(next);
+          if (moved || forceDue) {
+            lastForceUpdateRef.current = now;
+            applyLocation(next);
+          }
         }
       );
+
+      retryTimer = setInterval(async () => {
+        if (!lastLocationRef.current) {
+          const cached = await getLastKnownLocation();
+          if (cached) applyLocation(cached);
+        }
+        try {
+          const fresh = await getCurrentLocation();
+          applyLocation(fresh);
+        } catch {
+          // GPS still searching — keep last known
+        }
+      }, RETRY_MS);
     };
 
     startWatching();
 
     return () => {
       subscription?.remove();
+      if (retryTimer) clearInterval(retryTimer);
     };
-  }, [navigationMode, threshold]);
+  }, [navigationMode, threshold, applyLocation]);
 
-  return { location, heading, loading, error, permissionDenied, refresh };
+  return { location, heading, loading, locating, error, permissionDenied, refresh };
 }

@@ -260,7 +260,9 @@ export function buildAddress(tags) {
   const regionName = tags["addr:region"] || tags["is_in:state"] || null;
   const postalCode = tags["addr:postcode"] || null;
 
-  const parts = [street, housenumber, city, district, regionName, postalCode].filter(Boolean);
+  const streetLine =
+    street && housenumber ? `${street}, ${housenumber}` : street || housenumber;
+  const parts = [streetLine, city, district, regionName, postalCode].filter(Boolean);
   return {
     street,
     housenumber,

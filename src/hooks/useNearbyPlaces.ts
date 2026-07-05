@@ -4,6 +4,7 @@ import {
   filterPlacesByDistance,
   findNearestService,
 } from "@/services/placesAggregator";
+import { subscribeDatabaseRefresh } from "@/services/databaseUpdateService";
 import { Place, UserLocation } from "@/types/place";
 
 interface UseNearbyPlacesOptions {
@@ -60,6 +61,12 @@ export function useNearbyPlaces(
 
   useEffect(() => {
     refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    return subscribeDatabaseRefresh(() => {
+      refresh();
+    });
   }, [refresh]);
 
   const nearestService = findNearestService(places);

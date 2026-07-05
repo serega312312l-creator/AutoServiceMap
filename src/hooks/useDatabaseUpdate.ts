@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import {
   checkAndUpdateDatabase,
   getDatabaseUpdateStatus,
-  DatabaseUpdateStatus,
 } from "@/services/databaseUpdateService";
+import { DatabaseUpdateStatus } from "@/types/database";
 import { isDeviceOnline } from "@/services/networkService";
 import { UserLocation } from "@/types/place";
 import { loadLocalDatabase } from "@/services/localDatabaseService";
@@ -40,7 +40,7 @@ export function useDatabaseUpdate(location: UserLocation | null) {
       const result = await checkAndUpdateDatabase({
         force,
         priorityRegionIds,
-        onProgress: (msg) => setStatus((s) => (s ? { ...s, message: msg } : s)),
+        onProgress: (msg) => setStatus((s: DatabaseUpdateStatus | null) => (s ? { ...s, message: msg } : s)),
       });
       setStatus(result);
       return result;

@@ -8,7 +8,17 @@ import { useDatabaseUpdate } from "@/hooks/useDatabaseUpdate";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { isNightMapEnabled, setNightMapEnabled } from "@/services/mapPreferencesService";
 
+import { useAuth } from "@/hooks/useAuth";
+import { getPlaceCacheStats } from "@/services/placesCacheService";
+import {
+  getNotificationPrefs,
+  setNotificationPrefs,
+  requestNotificationPermission,
+} from "@/services/notificationService";
+
 const MENU = [
+  { route: "/my-places", icon: "⭐", title: "Мої місця", subtitle: "Обране, теги, списки маршрутів" },
+  { route: "/auth", icon: "👤", title: "Акаунт", subtitle: "Вхід та синхронізація" },
   { route: "/premium", icon: "👑", title: "Premium", subtitle: "Підписка та пробний період" },
   { route: "/garage", icon: "🚗", title: "Гараж", subtitle: "Ваші авто", premium: true },
   { route: "/sos", icon: "🆘", title: "SOS сім'ї", subtitle: "Контакти та таймер безпеки", premium: true },
@@ -27,10 +37,20 @@ export default function SettingsScreen() {
   const { due } = useReminders();
   const { location } = useUserLocation();
   const { status: dbStatus, runUpdate } = useDatabaseUpdate(location);
+  const { user, signOut, cloudAvailable } = useAuth();
   const [nightMap, setNightMap] = useState(true);
+  const [cacheStats, setCacheStats] = useState({ entries: 0, totalPlaces: 0 });
+  const [notifPrefs, setNotifPrefs] = useState({
+    newPlacesNearby: true,
+    databaseUpdates: true,
+    favoriteGeofence: true,
+    geofenceRadiusM: 2000,
+  });
 
   useEffect(() => {
     isNightMapEnabled().then(setNightMap);
+    getPlaceCacheStats().then(setCacheStats);
+    getNotificationPrefs().then(setNotifPrefs);
   }, []);
 
   const toggleNightMap = async () => {
@@ -61,6 +81,62 @@ export default function SettingsScreen() {
         <Text style={styles.themeText}>{mode === "dark" ? "🌙 Темна тема" : "☀️ Світла тема"}</Text>
         <Text style={styles.themeToggle}>Змінити</Text>
       </Pressable>
+
+      <Pressable style={styles.themeRow} onPress={() => router.push("/auth")}>
+        <Text style={styles.themeText}>
+          👤 {user?.isGuest || !user ? "Увійти в акаунт" : user.email}
+        </Text>
+        <Text style={styles.themeToggle}>
+          {user?.isGuest || !user ? "Синхр." : "Профіль"}
+        </Text>
+      </Pressable>
+
+      {!user?.isGuest && user ? (
+        <Pressable style={styles.themeRow} onPress={signOut}>
+          <Text style={styles.themeText}>Вийти</Text>
+          <Text style={styles.themeToggle}>↩</Text>
+        </Pressable>
+      ) : null}
+
+      {!cloudAvailable ? (
+        <Text style={styles.dbHint}>
+          Хмара: додайте SUPABASE_URL і SUPABASE_ANON_KEY в .env для синхронізації
+        </Text>
+      ) : null}
+
+      <View style={styles.dbBox}>
+        <Text style={styles.dbTitle}>🔔 Сповіщення</Text>
+        <Pressable
+          style={styles.themeRow}
+          onPress={async () => {
+            await requestNotificationPermission();
+            const next = !notifPrefs.databaseUpdates;
+            await setNotificationPrefs({ databaseUpdates: next });
+            setNotifPrefs((p) => ({ ...p, databaseUpdates: next }));
+          }}
+        >
+          <Text style={styles.themeText}>Оновлення бази</Text>
+          <Text style={styles.themeToggle}>{notifPrefs.databaseUpdates ? "Увімк." : "Вимк."}</Text>
+        </Pressable>
+        <Pressable
+          style={styles.themeRow}
+          onPress={async () => {
+            const next = !notifPrefs.favoriteGeofence;
+            await setNotificationPrefs({ favoriteGeofence: next });
+            setNotifPrefs((p) => ({ ...p, favoriteGeofence: next }));
+          }}
+        >
+          <Text style={styles.themeText}>Поруч обране місце (2 км)</Text>
+          <Text style={styles.themeToggle}>{notifPrefs.favoriteGeofence ? "Увімк." : "Вимк."}</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.dbBox}>
+        <Text style={styles.dbTitle}>💾 Кеш OSM/Google</Text>
+        <Text style={styles.dbMeta}>
+          {cacheStats.entries} зон · {cacheStats.totalPlaces} місць · TTL 7 днів
+        </Text>
+      </View>
 
       <Pressable style={styles.themeRow} onPress={toggleNightMap}>
         <Text style={styles.themeText}>{nightMap ? "🌃 Нічна карта" : "🗺 Звичайна карта"}</Text>

@@ -2,7 +2,13 @@ import { fetchGooglePlaces } from "@/services/googlePlacesService";
 import { searchNearbyFromLocalDb } from "@/services/localDatabaseService";
 import { isDeviceOnline } from "@/services/networkService";
 import { fetchOsmPlaces } from "@/services/osmService";
+import {
+  getCachedOnlinePlaces,
+  setCachedOnlinePlaces,
+  purgeExpiredPlaceCache,
+} from "@/services/placesCacheService";
 import { getDistanceMeters } from "@/services/locationService";
+import { resolvePlaceOpenStatus } from "@/utils/openingHours";
 import { SERVICE_PRIORITY_CATEGORIES } from "@/constants/emergency";
 import { Place, PlaceCategory, UserLocation } from "@/types/place";
 
@@ -14,6 +20,22 @@ export interface FetchPlacesResult {
 }
 
 const ONLINE_TIMEOUT_MS = 8000;
+
+async function fetchGoogleWithCache(location: UserLocation, radiusMeters: number): Promise<Place[]> {
+  const cached = await getCachedOnlinePlaces(location, radiusMeters, "google");
+  if (cached) return cached;
+  const places = await fetchGooglePlaces(location, radiusMeters);
+  await setCachedOnlinePlaces(location, radiusMeters, "google", places);
+  return places;
+}
+
+async function fetchOsmWithCache(location: UserLocation, radiusMeters: number): Promise<Place[]> {
+  const cached = await getCachedOnlinePlaces(location, radiusMeters, "osm");
+  if (cached) return cached;
+  const places = await fetchOsmPlaces(location, radiusMeters);
+  await setCachedOnlinePlaces(location, radiusMeters, "osm", places);
+  return places;
+}
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -28,6 +50,7 @@ export async function fetchNearbyPlaces(
   radiusMeters: number
 ): Promise<FetchPlacesResult> {
   const localPlaces = await searchNearbyFromLocalDb(location, radiusMeters, "all", 1000);
+  purgeExpiredPlaceCache().catch(() => {});
 
   const online = await isDeviceOnline();
   if (!online) {
@@ -40,8 +63,8 @@ export async function fetchNearbyPlaces(
   }
 
   const [googleResult, osmResult] = await Promise.allSettled([
-    withTimeout(fetchGooglePlaces(location, radiusMeters), ONLINE_TIMEOUT_MS),
-    withTimeout(fetchOsmPlaces(location, radiusMeters), ONLINE_TIMEOUT_MS),
+    withTimeout(fetchGoogleWithCache(location, radiusMeters), ONLINE_TIMEOUT_MS),
+    withTimeout(fetchOsmWithCache(location, radiusMeters), ONLINE_TIMEOUT_MS),
   ]);
 
   const onlinePlaces: Place[] = [
@@ -82,6 +105,10 @@ export function filterPlacesByDistance(places: Place[], radiusMeters: number): P
   return places.filter((place) => (place.distanceMeters ?? Infinity) <= radiusMeters);
 }
 
+export function filterOpenNow(places: Place[]): Place[] {
+  return places.filter((p) => resolvePlaceOpenStatus(p) === true);
+}
+
 export function filterPlacesByQuery(places: Place[], query: string): Place[] {
   const normalized = query.trim().toLowerCase();
   if (!normalized) return places;
@@ -110,10 +137,14 @@ export function findNearestService(places: Place[]): Place | null {
 
 function enrichWithDistance(places: Place[], location: UserLocation): Place[] {
   return places
-    .map((place) => ({
-      ...place,
-      distanceMeters: getDistanceMeters(location, place.coordinates),
-    }))
+    .map((place) => {
+      const open = resolvePlaceOpenStatus(place);
+      return {
+        ...place,
+        distanceMeters: getDistanceMeters(location, place.coordinates),
+        ...(open != null && place.isOpen == null ? { isOpen: open } : {}),
+      };
+    })
     .sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0));
 }
 

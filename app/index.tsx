@@ -39,12 +39,15 @@ import { useSos } from "@/hooks/useSos";
 import { useUserLocation } from "@/hooks/useUserLocation";
 import { filterPlacesForCar } from "@/services/carFilterService";
 import { analyzeDeadZones, DeadZoneWarning } from "@/services/deadZoneService";
+import { OpenNowToggle } from "@/components/OpenNowToggle";
 import {
   filterPlaces,
+  filterOpenNow,
   filterPlacesByDistance,
   filterPlacesByQuery,
   findNearestByCategory,
 } from "@/services/placesAggregator";
+import { checkFavoriteGeofence, checkNewPlacesAfterUpdate } from "@/services/notificationService";
 import {
   fetchDrivingRoutes,
   getRemainingRouteDistance,
@@ -71,6 +74,7 @@ export default function HomeScreen() {
   const [alongRoute, setAlongRoute] = useState(false);
   const [fuelFilter, setFuelFilter] = useState<FuelType | "all">("all");
   const [routeCached, setRouteCached] = useState(false);
+  const [openNowOnly, setOpenNowOnly] = useState(false);
 
   const isNavigating = routePlace != null;
   const { isPremium } = usePremium();
@@ -117,13 +121,26 @@ export default function HomeScreen() {
     if (alongRoute && routeInfo?.coordinates) {
       result = filterAlongRouteMode(result, routeInfo.coordinates, true);
     }
+    if (openNowOnly) {
+      result = filterOpenNow(result);
+    }
     return result;
-  }, [carFilteredPlaces, selectedCategory, radiusMeters, searchQuery, fuelFilter, alongRoute, routeInfo?.coordinates]);
+  }, [carFilteredPlaces, selectedCategory, radiusMeters, searchQuery, fuelFilter, alongRoute, routeInfo?.coordinates, openNowOnly]);
 
   useEffect(() => {
     isNightMapEnabled().then(setNightMap);
     isAlongRouteDefault().then(setAlongRoute);
   }, []);
+
+  useEffect(() => {
+    if (!location || favorites.length === 0) return;
+    checkFavoriteGeofence(location, favorites).catch(() => {});
+  }, [location, favorites]);
+
+  useEffect(() => {
+    if (!location || localCount <= 0) return;
+    checkNewPlacesAfterUpdate(location, localCount).catch(() => {});
+  }, [location, localCount]);
 
   const toggleAlongRoute = useCallback(() => {
     setAlongRoute((prev) => {
@@ -283,6 +300,7 @@ export default function HomeScreen() {
           <FuelTypeFilter selected={fuelFilter} onSelect={setFuelFilter} />
         ) : null}
         <SearchBar value={searchQuery} onChange={setSearchQuery} />
+        <OpenNowToggle enabled={openNowOnly} onToggle={() => setOpenNowOnly((v) => !v)} />
         {nearestService ? (
           <Pressable style={styles.nearestListBtn} onPress={() => buildRoute(nearestService)}>
             <Text style={styles.nearestListText}>⚡ Найближчий: {nearestService.name}</Text>
@@ -322,6 +340,12 @@ export default function HomeScreen() {
       {(selectedCategory === "fuel" || selectedCategory === "all") && viewMode === "map" ? (
         <View style={styles.fuelFilterWrap}>
           <FuelTypeFilter selected={fuelFilter} onSelect={setFuelFilter} />
+        </View>
+      ) : null}
+
+      {viewMode === "map" ? (
+        <View style={styles.openNowWrap}>
+          <OpenNowToggle enabled={openNowOnly} onToggle={() => setOpenNowOnly((v) => !v)} />
         </View>
       ) : null}
 
@@ -512,6 +536,12 @@ const styles = StyleSheet.create({
     top: 148,
     left: 0,
     right: 0,
+    zIndex: 12,
+  },
+  openNowWrap: {
+    position: "absolute",
+    top: 182,
+    left: 0,
     zIndex: 12,
   },
 });

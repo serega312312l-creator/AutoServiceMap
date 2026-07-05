@@ -1,11 +1,17 @@
+import { useEffect } from "react";
 import { Stack, router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { ThemeProvider, useTheme } from "@/hooks/useTheme";
+import { AuthProvider } from "@/hooks/useAuth";
+import { requestNotificationPermission } from "@/services/notificationService";
 
 function HeaderButtons() {
   return (
     <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+      <Pressable onPress={() => router.push("/my-places")} hitSlop={8}>
+        <Text style={{ fontSize: 16 }}>⭐</Text>
+      </Pressable>
       <Pressable onPress={() => router.push("/stress")} hitSlop={8}>
         <Text style={{ fontSize: 16 }}>⚡</Text>
       </Pressable>
@@ -22,6 +28,10 @@ function HeaderButtons() {
 function ThemedStack() {
   const { theme, mode } = useTheme();
 
+  useEffect(() => {
+    requestNotificationPermission().catch(() => {});
+  }, []);
+
   return (
     <>
       <StatusBar style={mode === "dark" ? "light" : "dark"} />
@@ -37,6 +47,8 @@ function ThemedStack() {
         <Stack.Screen name="breakdown" options={{ title: "Поломка" }} />
         <Stack.Screen name="stress" options={{ title: "Режим стресу" }} />
         <Stack.Screen name="plan-route" options={{ title: "Мій маршрут" }} />
+        <Stack.Screen name="my-places" options={{ title: "Мої місця" }} />
+        <Stack.Screen name="auth" options={{ title: "Акаунт" }} />
         <Stack.Screen name="place/[id]" options={{ title: "Деталі" }} />
         <Stack.Screen name="about" options={{ title: "Про додаток" }} />
         <Stack.Screen name="settings" options={{ title: "Налаштування" }} />
@@ -53,8 +65,10 @@ function ThemedStack() {
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <ThemedStack />
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <ThemedStack />
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

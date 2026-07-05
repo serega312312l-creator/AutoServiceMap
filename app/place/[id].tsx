@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
+import { ScrollView, StyleSheet, Text, View, Pressable, Alert } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { CATEGORY_FILTERS } from "@/constants/categories";
 import { PlaceRatingButtons } from "@/components/PlaceRatingButtons";
@@ -15,8 +15,11 @@ import { getUserSubmittedPhone } from "@/services/placeUserDataService";
 import { Place } from "@/types/place";
 import { openNavigation, openWebsite } from "@/utils/navigation";
 import { formatDisplayAddress, mergePlaceData, parsePhoneList } from "@/utils/placeFormat";
+import { usePlaceLists } from "@/hooks/usePlaceLists";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { useHistory } from "@/hooks/useHistory";
+import { sharePlace } from "@/utils/sharePlace";
+import { resolvePlaceOpenStatus } from "@/utils/openingHours";
 
 function getCategoryLabel(category: Place["category"]): string {
   return CATEGORY_FILTERS.find((item) => item.id === category)?.label ?? category;
@@ -25,6 +28,7 @@ function getCategoryLabel(category: Place["category"]): string {
 export default function PlaceDetailsScreen() {
   const params = useLocalSearchParams<{ id: string; data?: string }>();
   const { isFavorite, toggleFavorite, recordVisit } = useSavedPlaces();
+  const { lists, addToList } = usePlaceLists();
   const { logCall } = useHistory();
   const [fav, setFav] = useState(false);
   const [place, setPlace] = useState<Place | null>(null);
@@ -109,11 +113,16 @@ export default function PlaceDetailsScreen() {
         <Text style={styles.rating}>Рейтинг Google: ★ {place.rating.toFixed(1)}</Text>
       )}
 
-      {place.isOpen != null && (
-        <Text style={[styles.status, place.isOpen ? styles.open : styles.closed]}>
-          {place.isOpen ? "Зараз відкрито" : "Зараз зачинено"}
+      {place.isOpen != null || place.openingHours ? (
+        <Text
+          style={[
+            styles.status,
+            resolvePlaceOpenStatus(place) ? styles.open : styles.closed,
+          ]}
+        >
+          {resolvePlaceOpenStatus(place) ? "Зараз відкрито" : "Зараз зачинено"}
         </Text>
-      )}
+      ) : null}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Адреса</Text>
@@ -167,6 +176,36 @@ export default function PlaceDetailsScreen() {
         }
       >
         <Text style={styles.primaryButtonText}>Маршрут на карті</Text>
+      </Pressable>
+
+      <Pressable style={styles.secondaryButton} onPress={() => sharePlace(place)}>
+        <Text style={styles.secondaryButtonText}>📤 Поділитися місцем</Text>
+      </Pressable>
+
+      <Pressable
+        style={styles.secondaryButton}
+        onPress={() => {
+          if (lists.length === 0) {
+            Alert.alert("Списки", "Створіть список у «Мої місця»", [
+              { text: "OK" },
+              { text: "Відкрити", onPress: () => router.push("/my-places") },
+            ]);
+            return;
+          }
+          Alert.alert(
+            "Додати до списку",
+            undefined,
+            [
+              ...lists.map((l) => ({
+                text: l.name,
+                onPress: () => addToList(l.id, place),
+              })),
+              { text: "Скасувати", style: "cancel" as const },
+            ]
+          );
+        }}
+      >
+        <Text style={styles.secondaryButtonText}>📋 Додати до списку</Text>
       </Pressable>
 
       <Pressable style={styles.secondaryButton} onPress={() => openNavigation(place)}>

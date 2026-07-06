@@ -11,6 +11,10 @@
     "build:db": "node scripts/build-database.mjs",
     "export:manifest": "node scripts/export-manifest.mjs",
     "notify:region": "node scripts/notify-region-push.mjs",
+    "setup:supabase": "node scripts/setup-supabase.mjs",
+    "setup:full": "node scripts/setup-full.mjs --build",
+    "apk:qr": "node scripts/apk-qr.mjs",
+    "setup:supabase:apply": "node scripts/apply-supabase-keys.mjs",
     "build:android:preview": "eas build --platform android --profile preview",
     "build:android:store": "eas build --platform android --profile production",
     "submit:android": "eas submit --platform android --profile production"
@@ -44,7 +48,11 @@
     "@expo/ngrok": "^4.1.3",
     "@types/react": "~19.1.10",
     "babel-preset-expo": "~54.0.11",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~10.0.0",
+    "qrcode": "^1.5.4",
     "sql.js": "^1.14.1",
+    "supabase": "^2.109.0",
     "typescript": "~5.9.2"
   },
   "private": true

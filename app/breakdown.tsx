@@ -19,7 +19,6 @@ import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
 import { usePremium } from "@/hooks/usePremium";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { useUserLocation } from "@/hooks/useUserLocation";
-import { setPendingBuildRoute } from "@/services/routeIntentService";
 import { MAX_COVERAGE_RADIUS_METERS } from "@/constants/categories";
 import { findNearestByCategory } from "@/services/placesAggregator";
 import { formatDistance } from "@/services/locationService";
@@ -119,8 +118,10 @@ export default function BreakdownScreen() {
   }, [scenario, logBreakdown]);
 
   const goRoute = (place: Place) => {
-    setPendingBuildRoute(place);
-    router.navigate({ pathname: "/" });
+    router.navigate({
+      pathname: "/",
+      params: { buildRoute: JSON.stringify(place) },
+    });
   };
 
   const goDetails = (place: Place) => {

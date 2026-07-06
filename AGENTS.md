@@ -63,7 +63,7 @@ Cloud Agent працює без локального ПК. Секрети — л
    `curl -s "http://localhost:8081/index.bundle?platform=android&dev=true&minify=false" -o /tmp/a.bundle -w "%{http_code}\n"` (200 + `grep -c "Unable to resolve module" /tmp/a.bundle` = 0 означає, що весь код застосунку компілюється).
 4. `npx expo export --platform web` **не працює** — web-залежності (`react-dom`, `react-native-web`) не входять у проєкт; не встановлюй їх для перевірки.
 
-> Примітка (Google): застосунок за дизайном працює без Google — джерело за замовчуванням OSM Overpass. Для Google-даних потрібні: секрет `GOOGLE_MAPS_API_KEY` (саме з `Y`) та увімкнені в GCP-проєкті **Places API (New)** і **Maps SDK for Android**. Без цього виклики Google повертають 403/дефолт, а застосунок тихо падає на OSM.
+> Примітка (Google): застосунок працює навіть без Google (джерело за замовчуванням — OSM Overpass), але Google-дані ввімкнено. Потрібні: секрет `GOOGLE_MAPS_API_KEY` (саме з `Y`) і `GOOGLE_PLACES_API_KEY`, а в GCP-проєкті — увімкнені **Places API (New)** та **Maps SDK for Android** (у тому ж проєкті, якому належить ключ, з підключеним білінгом). Інакше виклики Google повертають 403, і застосунок тихо падає на OSM.
 
 ### Структура проєкту
 

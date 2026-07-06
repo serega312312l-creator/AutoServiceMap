@@ -19,6 +19,7 @@ import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
 import { usePremium } from "@/hooks/usePremium";
 import { useSavedPlaces } from "@/hooks/useSavedPlaces";
 import { useUserLocation } from "@/hooks/useUserLocation";
+import { setPendingBuildRoute } from "@/services/routeIntentService";
 import { MAX_COVERAGE_RADIUS_METERS } from "@/constants/categories";
 import { findNearestByCategory } from "@/services/placesAggregator";
 import { formatDistance } from "@/services/locationService";
@@ -75,7 +76,7 @@ function ServiceCard({
 }
 
 export default function BreakdownScreen() {
-  const { location, loading: locLoading } = useUserLocation();
+  const { location, loading: locLoading, error: locError, refresh: refreshLocation } = useUserLocation();
   const { places, isOffline, localCount, onlineCount, loading } = useNearbyPlaces(location, {
     radiusMeters: MAX_COVERAGE_RADIUS_METERS,
   });
@@ -118,10 +119,8 @@ export default function BreakdownScreen() {
   }, [scenario, logBreakdown]);
 
   const goRoute = (place: Place) => {
-    router.navigate({
-      pathname: "/",
-      params: { buildRoute: JSON.stringify(place) },
-    });
+    setPendingBuildRoute(place);
+    router.navigate({ pathname: "/" });
   };
 
   const goDetails = (place: Place) => {
@@ -131,11 +130,23 @@ export default function BreakdownScreen() {
     });
   };
 
-  if (locLoading || !location) {
+  if (locLoading && !location) {
     return (
       <View style={styles.center}>
         <ActivityIndicator color="#60a5fa" size="large" />
         <Text style={styles.loadingText}>Шукаємо допомогу поруч...</Text>
+      </View>
+    );
+  }
+
+  if (!location) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color="#60a5fa" size="large" />
+        <Text style={styles.loadingText}>{locError ?? "Очікуємо GPS-сигнал..."}</Text>
+        <Pressable style={styles.retryBtn} onPress={refreshLocation}>
+          <Text style={styles.retryText}>Спробувати знову</Text>
+        </Pressable>
       </View>
     );
   }
@@ -156,7 +167,7 @@ export default function BreakdownScreen() {
 
       {isPremium ? (
         <Pressable style={styles.sosLink} onPress={() => router.push("/sos")}>
-          <Text style={styles.sosLinkText}>👑 SOS сім'ї (Premium)</Text>
+          <Text style={styles.sosLinkText}>👑 SOS сім&apos;ї (Premium)</Text>
         </Pressable>
       ) : null}
 
@@ -246,7 +257,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#0f172a",
   },
-  loadingText: { color: "#94a3b8", marginTop: 12 },
+  loadingText: { color: "#94a3b8", marginTop: 12, textAlign: "center", paddingHorizontal: 24 },
+  retryBtn: {
+    marginTop: 16,
+    backgroundColor: "#2563eb",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+  },
+  retryText: { color: "#fff", fontWeight: "700" },
   headline: { color: "#f87171", fontSize: 22, fontWeight: "800", marginBottom: 6 },
   subhead: { color: "#94a3b8", lineHeight: 20, marginBottom: 12 },
   sosLink: { marginVertical: 8, alignItems: "center" },

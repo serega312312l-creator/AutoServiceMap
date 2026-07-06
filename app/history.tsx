@@ -52,7 +52,7 @@ export default function HistoryScreen() {
         </View>
 
         {entries.length === 0 ? (
-          <Text style={styles.empty}>Історія порожня. Візити та маршрути з'являться тут.</Text>
+          <Text style={styles.empty}>Історія порожня. Візити та маршрути з&apos;являться тут.</Text>
         ) : (
           entries.map((e) => (
             <View key={e.id} style={styles.row}>

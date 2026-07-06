@@ -58,8 +58,12 @@ Cloud Agent працює без локального ПК. Секрети — л
 ### Перевірка змін
 
 1. `npm ci` (або покладайся на `install` у `.cursor/environment.json`)
-2. `npm run lint` — обов'язково
-3. Для UI: за можливості `npx expo export --platform web` (якщо не падає без нативних модулів)
+2. `npm run lint` — обов'язково; типи — `npx tsc --noEmit`
+3. Запуск у cloud: `npx expo start` (Metro dev server, порт 8081). GUI не рендериться без Android-емулятора/пристрою — перевіряй збірку застосунку через Metro-бандл:
+   `curl -s "http://localhost:8081/index.bundle?platform=android&dev=true&minify=false" -o /tmp/a.bundle -w "%{http_code}\n"` (200 + `grep -c "Unable to resolve module" /tmp/a.bundle` = 0 означає, що весь код застосунку компілюється).
+4. `npx expo export --platform web` **не працює** — web-залежності (`react-dom`, `react-native-web`) не входять у проєкт; не встановлюй їх для перевірки.
+
+> Примітка: секрет для Google Maps у dashboard названо `GOOGLE_MAPS_API_KE` (без `Y`), тому `process.env.GOOGLE_MAPS_API_KEY` порожній і карта падає на дефолт. Виправ ім'я секрета на `GOOGLE_MAPS_API_KEY`, якщо потрібна карта Google.
 
 ### Структура проєкту
 

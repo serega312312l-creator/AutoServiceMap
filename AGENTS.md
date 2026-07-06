@@ -63,7 +63,7 @@ Cloud Agent працює без локального ПК. Секрети — л
    `curl -s "http://localhost:8081/index.bundle?platform=android&dev=true&minify=false" -o /tmp/a.bundle -w "%{http_code}\n"` (200 + `grep -c "Unable to resolve module" /tmp/a.bundle` = 0 означає, що весь код застосунку компілюється).
 4. `npx expo export --platform web` **не працює** — web-залежності (`react-dom`, `react-native-web`) не входять у проєкт; не встановлюй їх для перевірки.
 
-> Примітка: секрет для Google Maps у dashboard названо `GOOGLE_MAPS_API_KE` (без `Y`), тому `process.env.GOOGLE_MAPS_API_KEY` порожній і карта падає на дефолт. Виправ ім'я секрета на `GOOGLE_MAPS_API_KEY`, якщо потрібна карта Google.
+> Примітка (Google): застосунок за дизайном працює без Google — джерело за замовчуванням OSM Overpass. Для Google-даних потрібні: секрет `GOOGLE_MAPS_API_KEY` (саме з `Y`) та увімкнені в GCP-проєкті **Places API (New)** і **Maps SDK for Android**. Без цього виклики Google повертають 403/дефолт, а застосунок тихо падає на OSM.
 
 ### Структура проєкту
 

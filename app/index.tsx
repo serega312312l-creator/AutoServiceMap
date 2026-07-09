@@ -55,6 +55,7 @@ import {
   getRemainingRouteDistance,
   RouteInfo,
 } from "@/services/routeService";
+import { consumePendingBuildRoute } from "@/services/routeIntentService";
 import { updateNavigationVoice } from "@/services/voiceGuidanceService";
 import { Place, PlaceCategory } from "@/types/place";
 
@@ -76,6 +77,7 @@ export default function HomeScreen() {
   const [alongRoute, setAlongRoute] = useState(false);
   const [fuelFilter, setFuelFilter] = useState<FuelType | "all">("all");
   const [routeCached, setRouteCached] = useState(false);
+  const [routeError, setRouteError] = useState<string | null>(null);
   const [openNowOnly, setOpenNowOnly] = useState(false);
 
   const isNavigating = routePlace != null;
@@ -180,6 +182,7 @@ export default function HomeScreen() {
       setRoutePlace(place);
       setRouteInfo(null);
       setRouteAlternatives([]);
+      setRouteError(null);
       setRouteLoading(true);
       setViewMode("map");
       await recordVisit(place);
@@ -194,6 +197,8 @@ export default function HomeScreen() {
       if (routes[0]) {
         await saveRouteCache(place, routes[0]);
         setRouteCached(true);
+      } else {
+        setRouteError("Не вдалося побудувати маршрут. Спробуйте «GPS» або перевірте інтернет.");
       }
     },
     [location, recordVisit, logRoute, isPremium]
@@ -205,6 +210,7 @@ export default function HomeScreen() {
     setRouteAlternatives([]);
     setRouteLoading(false);
     setRouteCached(false);
+    setRouteError(null);
   }, []);
 
   const selectRoute = useCallback(
@@ -234,6 +240,12 @@ export default function HomeScreen() {
       // ignore
     }
   }, [params.buildRoute, location, buildRoute]);
+
+  useEffect(() => {
+    if (!location) return;
+    const pending = consumePendingBuildRoute();
+    if (pending) buildRoute(pending);
+  }, [location, buildRoute]);
 
   useEffect(() => {
     if (!location) return;
@@ -420,6 +432,7 @@ export default function HomeScreen() {
           durationSeconds={routeInfo?.durationSeconds ?? 0}
           loading={routeLoading}
           cached={routeCached && !routeLoading}
+          error={routeError}
           onClose={clearRoute}
         />
       ) : null}

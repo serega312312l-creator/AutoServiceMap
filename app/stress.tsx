@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";import { router } from "expo-router";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { router } from "expo-router";
 import { EmergencyPanel } from "@/components/EmergencyPanel";
 import { useNearbyPlaces } from "@/hooks/useNearbyPlaces";
 import { useUserLocation } from "@/hooks/useUserLocation";

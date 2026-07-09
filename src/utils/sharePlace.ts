@@ -1,7 +1,6 @@
 import { Share } from "react-native";
 import { Place } from "@/types/place";
-import { formatDisplayAddress } from "@/utils/placeFormat";
-import { getGoogleMapsUrl } from "@/utils/placeFormat";
+import { formatDisplayAddress, getGoogleMapsUrl } from "@/utils/placeFormat";
 
 export async function sharePlace(place: Place): Promise<void> {
   const address = formatDisplayAddress(place);

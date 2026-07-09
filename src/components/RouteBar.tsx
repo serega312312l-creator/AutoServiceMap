@@ -10,6 +10,7 @@ interface RouteBarProps {
   durationSeconds: number;
   loading?: boolean;
   cached?: boolean;
+  error?: string | null;
   onClose: () => void;
 }
 
@@ -19,6 +20,7 @@ export function RouteBar({
   durationSeconds,
   loading,
   cached,
+  error,
   onClose,
 }: RouteBarProps) {
   return (
@@ -29,6 +31,8 @@ export function RouteBar({
         </Text>
         {loading ? (
           <Text style={styles.meta}>Будуємо маршрут...</Text>
+        ) : error ? (
+          <Text style={styles.errorMeta}>{error}</Text>
         ) : (
           <Text style={styles.meta}>
             {formatDistance(distanceMeters)} · {formatRouteDuration(durationSeconds)}
@@ -71,6 +75,12 @@ const styles = StyleSheet.create({
   },
   meta: {
     color: "#93c5fd",
+    fontSize: 12,
+    marginTop: 2,
+    fontWeight: "600",
+  },
+  errorMeta: {
+    color: "#fca5a5",
     fontSize: 12,
     marginTop: 2,
     fontWeight: "600",

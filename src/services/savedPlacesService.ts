@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Place } from "@/types/place";
-import { PlaceList, PlaceTag, SavedPlaceEntry } from "@/types/user";
+import { PlaceTag, SavedPlaceEntry } from "@/types/user";
 import { pushCloudSync } from "@/services/syncService";
 
 const FAVORITES_KEY = "avtogid:favorites_v2";

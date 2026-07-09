@@ -1,5 +1,4 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { formatDistance } from "@/services/locationService";
 import { Place } from "@/types/place";
 
 interface SavedPlacesBarProps {

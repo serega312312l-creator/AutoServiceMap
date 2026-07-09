@@ -3,8 +3,8 @@ import { PlaceCategory } from "@/types/place";
 import {
   EXTRA_CATEGORY_FILTERS,
   PRIMARY_CATEGORY_FILTERS,
+  DISTANCE_OPTIONS,
 } from "@/constants/categories";
-import { DISTANCE_OPTIONS } from "@/constants/categories";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { formatDistance } from "@/services/locationService";
 

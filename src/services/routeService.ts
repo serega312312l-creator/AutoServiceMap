@@ -8,13 +8,13 @@ export interface RouteInfo {
 }
 
 interface OsrmResponse {
-  routes?: Array<{
+  routes?: {
     distance: number;
     duration: number;
     geometry?: {
       coordinates: [number, number][];
     };
-  }>;
+  }[];
 }
 
 function parseOsrmRoute(route: NonNullable<OsrmResponse["routes"]>[0]): RouteInfo | null {

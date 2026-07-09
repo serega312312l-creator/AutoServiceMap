@@ -4,7 +4,6 @@ import { Place } from "@/types/place";
 import { ScenarioId } from "@/types/scenario";
 import {
   getHistory,
-  addHistoryEntry,
   recordVisit,
   recordCall,
   recordRoute,

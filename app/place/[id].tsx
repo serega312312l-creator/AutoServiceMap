@@ -25,6 +25,12 @@ function getCategoryLabel(category: Place["category"]): string {
   return CATEGORY_FILTERS.find((item) => item.id === category)?.label ?? category;
 }
 
+function getSourceLabel(source: Place["source"]): string {
+  if (source === "google") return "Google";
+  if (source === "local") return "Локальна база";
+  return "OpenStreetMap";
+}
+
 export default function PlaceDetailsScreen() {
   const params = useLocalSearchParams<{ id: string; data?: string }>();
   const { isFavorite, toggleFavorite, recordVisit } = useSavedPlaces();
@@ -32,12 +38,14 @@ export default function PlaceDetailsScreen() {
   const { logCall } = useHistory();
   const [fav, setFav] = useState(false);
   const [place, setPlace] = useState<Place | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [extraPhones, setExtraPhones] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
+      setLoadError(false);
       let fromParams: Place | null = null;
       try {
         fromParams = params.data ? (JSON.parse(params.data) as Place) : null;
@@ -46,10 +54,19 @@ export default function PlaceDetailsScreen() {
       }
 
       const id = params.id ?? fromParams?.id;
-      if (!id) return;
+      if (!id) {
+        if (!cancelled) setLoadError(true);
+        return;
+      }
 
       const fromDb = await getLocalPlaceById(id);
-      const merged = mergePlaceData(fromParams ?? fromDb!, fromDb);
+      const base = fromParams ?? fromDb;
+      if (!base) {
+        if (!cancelled) setLoadError(true);
+        return;
+      }
+
+      const merged = mergePlaceData(base, fromDb);
       const userPhone = await getUserSubmittedPhone(id);
 
       const allPhones = [
@@ -70,6 +87,17 @@ export default function PlaceDetailsScreen() {
       cancelled = true;
     };
   }, [params.id, params.data, isFavorite, recordVisit]);
+
+  if (loadError) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorTitle}>Місце не знайдено</Text>
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Text style={styles.backBtnText}>Назад</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   if (!place) {
     return (
@@ -101,9 +129,7 @@ export default function PlaceDetailsScreen() {
 
       <View style={styles.badges}>
         <Text style={styles.badge}>{getCategoryLabel(place.category)}</Text>
-        <Text style={styles.badgeMuted}>
-          {place.source === "google" ? "Google" : "OpenStreetMap"}
-        </Text>
+        <Text style={styles.badgeMuted}>{getSourceLabel(place.source)}</Text>
         {place.distanceMeters != null && (
           <Text style={styles.badgeHighlight}>{formatDistance(place.distanceMeters)}</Text>
         )}
@@ -297,4 +323,12 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: { color: "#94a3b8", fontSize: 14, fontWeight: "600" },
   errorTitle: { color: "#f8fafc", fontSize: 18, fontWeight: "700" },
+  backBtn: {
+    marginTop: 16,
+    backgroundColor: "#2563eb",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  backBtnText: { color: "#ffffff", fontWeight: "700" },
 });

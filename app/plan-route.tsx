@@ -24,6 +24,7 @@ export default function PlanRouteScreen() {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{
     destName: string;
+    coordinates: { latitude: number; longitude: number };
     distance: number;
     duration: number;
     warning: string | null;
@@ -60,6 +61,7 @@ export default function PlanRouteScreen() {
 
     setResult({
       destName: name,
+      coordinates: { latitude: lat, longitude: lng },
       distance: route.distanceMeters,
       duration: route.durationSeconds,
       warning: warning?.message ?? null,
@@ -116,7 +118,7 @@ export default function PlanRouteScreen() {
                     name: result.destName,
                     category: "sto",
                     source: "local",
-                    coordinates: UKRAINE_REGIONS.find((x) => x.name === result.destName)?.center,
+                    coordinates: result.coordinates,
                   }),
                 },
               })

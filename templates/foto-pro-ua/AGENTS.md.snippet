@@ -1,0 +1,35 @@
+# ФОТО PRO UA — інструкції для агентів
+
+Мобільний застосунок для роботи з фото (Expo, TypeScript).
+
+## Стек
+
+- `com.fotoproua.app`, slug `foto-pro-ua`, EAS `@serega312312/foto-pro-ua`
+- Секрети: `config/env.js` + `app.config.js`
+- Пов’язані проєкти: AVTOGID, СКАНЕР PDF UA (окремі репо)
+
+## Конвенції
+
+- UI — **українською**
+- Не комітити `.env`, ключі, keystore
+- Після змін: `npm run lint` (якщо є в package.json)
+
+## Cursor Cloud
+
+Секрети: **Dashboard → Cloud Agents → Secrets** (тип «Секрет виконання»).
+
+| Змінна | Призначення |
+|--------|-------------|
+| `EXPO_TOKEN` | EAS build у cloud |
+| `GOOGLE_MAPS_API_KEY` / `КЛЮЧ_API_КАРТ_GOOGLE` | якщо є карта/Google API |
+
+### Перший запуск у cloud
+
+1. `npm ci`
+2. `node scripts/integrate-cursor-env.mjs` — якщо app.config.js ще без envFirst
+3. `npm run lint`
+
+### Не робити без запиту
+
+- `eas build` / `eas submit`
+- Коміт секретів

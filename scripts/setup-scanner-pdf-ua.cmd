@@ -1,20 +1,11 @@
 @echo off
-REM СКАНЕР PDF UA — Cursor Cloud як AVTOGID
-REM Змініть APP_PATH на реальну папку (див. dir нижче)
-set "APP_PATH=C:\Users\Laptoper USA\Projects\SkanerPdfUA"
-if not exist "%APP_PATH%" set "APP_PATH=C:\Users\Laptoper USA\Projects\PDFScannerUA"
-if not exist "%APP_PATH%" set "APP_PATH=C:\Users\Laptoper USA\Projects\ScannerPDF"
+REM СКАНЕР PDF UA — повне налаштування (Cursor Cloud + lint + EAS)
+set "APP_PATH=C:\Users\Laptoper USA\Projects\skanerpdfua"
 if not exist "%APP_PATH%" (
-  echo.
-  echo Папку СКАНЕР PDF UA не знайдено. Перевірте шлях:
-  echo   dir /b "C:\Users\Laptoper USA\Projects"
-  echo.
-  echo Потім відредагуйте APP_PATH у scripts\setup-scanner-pdf-ua.cmd
-  echo або запустіть вручну:
-  echo   node scripts\bootstrap-sibling-app.mjs "ШЛЯХ" scanner-pdf-ua com.scannerpdfua.app "СКАНЕР PDF UA"
-  echo.
+  echo Папка не знайдена: %APP_PATH%
   exit /b 1
 )
 cd /d "%~dp0.."
-node scripts/bootstrap-sibling-app.mjs "%APP_PATH%" scanner-pdf-ua com.scannerpdfua.app "СКАНЕР PDF UA"
+node scripts\bootstrap-sibling-app.mjs "%APP_PATH%" scanner-pdf-ua com.scannerpdfua.app "Scanner PDF UA"
+call scripts\finish-scanner-pdf-ua.cmd
 exit /b %ERRORLEVEL%

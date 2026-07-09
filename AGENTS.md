@@ -32,9 +32,9 @@ Cloud Agent працює без локального ПК. Секрети — л
 
 | Змінна | Призначення |
 |--------|-------------|
-| `GOOGLE_MAPS_API_KEY` | Google Maps SDK |
+| `GOOGLE_MAPS_API_KEY` або `КЛЮЧ_API_КАРТ_GOOGLE` | Google Maps SDK |
 | `GOOGLE_PLACES_API_KEY` | Places API (New) |
-| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_URL` або `URL-адреса_SUPABASE` | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Supabase anon key |
 | `DATABASE_MANIFEST_URL` | опційно; є дефолт у `.env.example` |
 | `DATABASE_BASE_URL` | опційно; є дефолт у `.env.example` |

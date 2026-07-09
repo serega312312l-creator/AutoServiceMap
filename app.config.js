@@ -1,9 +1,20 @@
-const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY ?? "YOUR_GOOGLE_MAPS_API_KEY";
-const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY ?? GOOGLE_MAPS_API_KEY;
-const DATABASE_MANIFEST_URL = process.env.DATABASE_MANIFEST_URL ?? "";
-const DATABASE_BASE_URL = process.env.DATABASE_BASE_URL ?? "";
-const SUPABASE_URL = process.env.SUPABASE_URL ?? "";
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY ?? "";
+/** Cursor Cloud Secrets можуть мати локалізовані імена — читаємо обидва варіанти */
+function envFirst(...keys) {
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value?.trim()) return value.trim();
+  }
+  return "";
+}
+
+const GOOGLE_MAPS_API_KEY =
+  envFirst("GOOGLE_MAPS_API_KEY", "КЛЮЧ_API_КАРТ_GOOGLE") || "YOUR_GOOGLE_MAPS_API_KEY";
+const GOOGLE_PLACES_API_KEY =
+  envFirst("GOOGLE_PLACES_API_KEY") || GOOGLE_MAPS_API_KEY;
+const DATABASE_MANIFEST_URL = envFirst("DATABASE_MANIFEST_URL");
+const DATABASE_BASE_URL = envFirst("DATABASE_BASE_URL");
+const SUPABASE_URL = envFirst("SUPABASE_URL", "URL-адреса_SUPABASE");
+const SUPABASE_ANON_KEY = envFirst("SUPABASE_ANON_KEY");
 const fs = require("fs");
 const path = require("path");
 const hasGoogleServices = fs.existsSync(path.join(__dirname, "google-services.json"));

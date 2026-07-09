@@ -12,7 +12,7 @@ const hasGoogleServices = fs.existsSync(path.join(__dirname, "google-services.js
 module.exports = {
   name: "AVTOGID",
   slug: "avtogid",
-  version: "1.0.0",
+  version: "1.0.1",
   orientation: "portrait",
   icon: "./assets/icon.png",
   scheme: "avtogid",
@@ -35,6 +35,7 @@ module.exports = {
     },
   },
   android: {
+    versionCode: 2,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#0f172a",

@@ -8,7 +8,8 @@ function envFirst(...keys) {
 }
 
 const GOOGLE_MAPS_API_KEY =
-  envFirst("GOOGLE_MAPS_API_KEY", "КЛЮЧ_API_КАРТ_GOOGLE") || "YOUR_GOOGLE_MAPS_API_KEY";
+  envFirst("GOOGLE_MAPS_API_KEY", "КЛЮЧ_API_КАРТ_GOOGLE", "GOOGLE_MAPS_API_KE") ||
+  "YOUR_GOOGLE_MAPS_API_KEY";
 const GOOGLE_PLACES_API_KEY =
   envFirst("GOOGLE_PLACES_API_KEY") || GOOGLE_MAPS_API_KEY;
 const DATABASE_MANIFEST_URL = envFirst("DATABASE_MANIFEST_URL");

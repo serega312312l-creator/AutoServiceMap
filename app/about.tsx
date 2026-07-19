@@ -4,8 +4,7 @@ import { router } from "expo-router";
 import { EmergencyPanel } from "@/components/EmergencyPanel";
 import { PREMIUM_FEATURES } from "@/constants/premium";
 
-const SUPPORT_EMAIL = "serega312312l@gmail.com";
-const PRIVACY_URL = "https://sites.google.com/view/avtogid-privacy";
+import { PRIVACY_URL, TERMS_URL, SUPPORT_EMAIL } from "@/constants/support";
 
 export default function AboutScreen() {
   return (
@@ -15,30 +14,46 @@ export default function AboutScreen() {
 
       <Text style={styles.paragraph}>
         AVTOGID допомагає швидко знайти СТО, евакуатор, шиномонтаж або автомагазин поруч — коли
-        сталася поломка, прокол колеса чи ДТП.
+        сталася поломка, прокол колеса чи ДТП. Працює офлайн. Зупинки в дорозі — відпочинок, їжа й
+        готелі.
       </Text>
 
       <EmergencyPanel />
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Можливості</Text>
-    <Text style={styles.bullet}>• Офлайн-база СТО без інтернету (до 100 км)</Text>
-    <Text style={styles.bullet}>• Екран «Поломка» — евакуатор, СТО, 112</Text>
-    <Text style={styles.bullet}>• Маршрут на карті в додатку</Text>
-    <Text style={styles.bullet}>• Улюблені та нещодавні місця</Text>
-    <Text style={styles.bullet}>• Сценарії поломки (прокол, ДТП, акумулятор)</Text>
-    <Text style={styles.bullet}>• Поділитися локацією</Text>
+        <Text style={styles.bullet}>• Офлайн-база СТО без інтернету (до 100 км)</Text>
+        <Text style={styles.bullet}>• Екран «Поломка» — евакуатор, СТО, 112</Text>
+        <Text style={styles.bullet}>• Маршрут на карті в додатку</Text>
+        <Text style={styles.bullet}>• Улюблені та нещодавні місця</Text>
+        <Text style={styles.bullet}>• Сценарії поломки (прокол, ДТП, акумулятор)</Text>
+        <Text style={styles.bullet}>• Поділитися локацією</Text>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>👑 Premium</Text>
+        <Text style={styles.bullet}>• Пробний період зараз; оплата через Google Play — скоро</Text>
         {PREMIUM_FEATURES.slice(0, 5).map((f) => (
-          <Text key={f.title} style={styles.bullet}>• {f.title}</Text>
+          <Text key={f.title} style={styles.bullet}>
+            • {f.title}
+          </Text>
         ))}
         <Pressable style={styles.premiumBtn} onPress={() => router.push("/premium")}>
           <Text style={styles.premiumBtnText}>Дізнатись більше →</Text>
         </Pressable>
       </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Права</Text>
+        <Text style={styles.bullet}>
+          © 2026 AVTOGID. Код, інтерфейс і бренд охороняються законодавством України. Усі права
+          захищено.
+        </Text>
+      </View>
+
+      <Pressable style={styles.linkRow} onPress={() => router.push("/support")}>
+        <Text style={styles.link}>💬 Підтримка та FAQ</Text>
+      </Pressable>
 
       <Pressable style={styles.linkRow} onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}>
         <Text style={styles.link}>📧 {SUPPORT_EMAIL}</Text>
@@ -48,7 +63,11 @@ export default function AboutScreen() {
         <Text style={styles.link}>🔒 Політика конфіденційності</Text>
       </Pressable>
 
-      <Text style={styles.footer}>© 2026 AVTOGID · Україна</Text>
+      <Pressable style={styles.linkRow} onPress={() => Linking.openURL(TERMS_URL)}>
+        <Text style={styles.link}>📄 Умови використання</Text>
+      </Pressable>
+
+      <Text style={styles.footer}>© 2026 AVTOGID · Україна · Усі права захищено</Text>
     </ScrollView>
   );
 }
